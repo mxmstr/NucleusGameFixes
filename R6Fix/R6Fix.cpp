@@ -103,12 +103,6 @@ void FillCustomAdapterInfo(IP_ADAPTER_INFO& adapterInfo)
     // Set a custom MAC address
     adapterInfo.AddressLength = 6;
     memcpy(adapterInfo.Address, macAddress, 6);
-    /*adapterInfo.Address[0] = 0x00;
-    adapterInfo.Address[1] = 0x1A;
-    adapterInfo.Address[2] = 0x2B;
-    adapterInfo.Address[3] = 0x3C;
-    adapterInfo.Address[4] = 0x4D;
-    adapterInfo.Address[5] = 0x5E;*/
 
     // Set IP address information (example IP)
     IP_ADDR_STRING ipAddr;
@@ -166,41 +160,85 @@ int WINAPI MyBind(SOCKET s, const struct sockaddr* name, int namelen)
 
         // Check the original port
         USHORT originalPort = ntohs(modified_addr.sin_port);
-        if (originalPort == 1200 || originalPort == 3074)
+        // Find the first available port starting from originalPort
+        for (USHORT port = originalPort; port < 65535; ++port)
         {
-            // Find the first available port starting from originalPort
-            for (USHORT port = originalPort; port < 65535; ++port)
+            modified_addr.sin_port = htons(port);
+            if (bind(s, (struct sockaddr*)&modified_addr, sizeof(modified_addr)) == 0)
             {
-                modified_addr.sin_port = htons(port);
-                if (bind(s, (struct sockaddr*)&modified_addr, sizeof(modified_addr)) == 0)
-                {
-                    // Successfully bound
-                    return 0;
-                }
+                // Successfully bound
+                return 0;
             }
+        }
 
-            // If no ports are available, return error
-            return SOCKET_ERROR;
-        }
-        else
-        {
-            //originalPort = 50000;
-            //// Find the first available port starting from originalPort
-            //for (USHORT port = originalPort; port < 65535; ++port)
-            //{
-            //    modified_addr.sin_port = htons(port);
-            //    if (bind(s, (struct sockaddr*)&modified_addr, sizeof(modified_addr)) == 0)
-            //    {
-            //        // Successfully bound
-            //        return 0;
-            //    }
-            //}
-            return bind(s, (struct sockaddr*)&modified_addr, sizeof(modified_addr));
-        }
+        // If no ports are available, return error
+        return SOCKET_ERROR;
     }
 
     // For other cases, proceed as normal
     return bind(s, name, namelen);
+}
+
+HANDLE MyCreateFileW(
+    LPCWSTR lpFileName,DWORD dwDesiredAccess,DWORD dwShareMode,LPSECURITY_ATTRIBUTES lpSecurityAttributes,
+    DWORD dwCreationDisposition,DWORD dwFlagsAndAttributes,HANDLE hTemplateFile
+)
+{
+    //Log("MyCreateFileW");
+    //LogW(lpFileName);
+
+    /*if (lpFileName == L"\\\\.\\pipe\\BattleEye")
+    {
+        LogW(L"BattleEye pipe detected");
+        return INVALID_HANDLE_VALUE;
+    }*/
+
+    std::wstring originalPath(lpFileName);
+    std::wstring userProfile = _wgetenv(L"USERPROFILE");
+    std::wstring oneDrivePath = userProfile + L"\\OneDrive\\Documents";
+    std::wstring userPathPrefix = L"C:\\Users\\";
+
+    // Check if lpFileName already starts with USERPROFILE
+    if (originalPath.rfind(userProfile, 0) == 0) {
+        // Path already starts with USERPROFILE, use it as is
+        return CreateFileW(lpFileName, dwDesiredAccess, dwShareMode, lpSecurityAttributes, dwCreationDisposition, dwFlagsAndAttributes, hTemplateFile);
+    }
+
+    // Check if lpFileName starts with "C:\Users\"
+    if (originalPath.rfind(userPathPrefix, 0) == 0) {
+        std::wstring username = originalPath.substr(userPathPrefix.length(), originalPath.find(L"\\", userPathPrefix.length()) - userPathPrefix.length());
+        std::wstring subpath = originalPath.substr(userPathPrefix.length() + username.length());
+
+        // Check if lpFileName starts with the OneDrive Documents path
+        if (originalPath.rfind(subpath, 0) == 0) {
+            // Replace OneDrive Documents path with USERPROFILE Documents
+            subpath = L"\\Documents" + originalPath.substr(oneDrivePath.length());
+        }
+
+        // Replace "C:\Users\<username>\" with USERPROFILE
+        std::wstring newUserProfilePath = userProfile + subpath;
+        LogW(L"Replaced file path");
+        LogW(newUserProfilePath.c_str());
+        return CreateFileW(newUserProfilePath.c_str(), dwDesiredAccess, dwShareMode, lpSecurityAttributes, dwCreationDisposition, dwFlagsAndAttributes, hTemplateFile);
+    }
+
+    return CreateFileW(lpFileName, dwDesiredAccess, dwShareMode, lpSecurityAttributes, dwCreationDisposition, dwFlagsAndAttributes, hTemplateFile);
+}
+
+BOOL WINAPI MyCreateDirectoryW(LPCWSTR lpPathName,LPSECURITY_ATTRIBUTES lpSecurityAttributes)
+{
+    Log("MyCreateDirectoryW");
+    LogW(lpPathName);
+
+    return CreateDirectoryW(lpPathName, lpSecurityAttributes);
+}
+
+DWORD MyGetFileAttributesW(LPCWSTR lpFileName)
+{
+    Log("MyGetFileAttributesW");
+    LogW(lpFileName);
+
+    return GetFileAttributesW(lpFileName);
 }
 
 void GenerateRandomMACAddress(unsigned char* macAddress) {
@@ -212,7 +250,7 @@ void GenerateRandomMACAddress(unsigned char* macAddress) {
     //macAddress[0] = macAddress[0] | 0x02;
 }
 
-R6FIX_API void __stdcall NativeInjectionEntryPoint(REMOTE_ENTRY_INFO * remoteInfo)
+AUTOREBIND_API void __stdcall NativeInjectionEntryPoint(REMOTE_ENTRY_INFO * remoteInfo)
 {
     ZeroMemory(tempString, sizeof(tempString));
     ZeroMemory(tempStringW, sizeof(tempStringW));
@@ -246,8 +284,15 @@ R6FIX_API void __stdcall NativeInjectionEntryPoint(REMOTE_ENTRY_INFO * remoteInf
 
     Log("Installed GetAdaptersInfo hook");
 
-    InstallHook("ws2_32.dll", "bind", MyBind); 
+    InstallHook("ws2_32.dll", "bind", MyBind);
 
     Log("Installed Bind hook");
+
+    //InstallHook("kernel32.dll", "CreateFileW", MyCreateFileW);
+
+    //Log("Installed CreateFileW hook");
+
+    //InstallHook("kernel32.dll", "CreateDirectoryW", MyCreateDirectoryW);
+    //InstallHook("kernel32.dll", "GetFileAttributesW", MyGetFileAttributesW);
 
 }

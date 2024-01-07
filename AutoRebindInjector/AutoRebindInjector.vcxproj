@@ -19,17 +19,17 @@
     </ProjectConfiguration>
   </ItemGroup>
   <PropertyGroup Label="Globals">
-    <ProjectGuid>{485DE09A-E290-4254-9009-B6211D27B407}</ProjectGuid>
+    <ProjectGuid>{1593315b-ca5a-466a-80b5-c4c68bdab3a5}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
-    <RootNamespace>HookTestInjector</RootNamespace>
-    <ProjectName>HookTestInjector</ProjectName>
+    <RootNamespace>AutoRebindInjector</RootNamespace>
+    <ProjectName>AutoRebindInjector</ProjectName>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v120_xp</PlatformToolset>
-    <CharacterSet>Unicode</CharacterSet>
+    <PlatformToolset>v143</PlatformToolset>
+    <CharacterSet>NotSet</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
@@ -169,7 +169,7 @@
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <AdditionalLibraryDirectories>..\easyhook</AdditionalLibraryDirectories>
-      <AdditionalDependencies>ole32.lib;dnsapi.lib;iphlpapi.lib;Ws2_32.lib;easyhook64.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>easyhook64.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
       <Command>copy /Y ..\easyhook\easyhook64.dll $(OutputPath)</Command>
@@ -180,7 +180,7 @@
     <ClInclude Include="targetver.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="Injector.cpp" />
+    <ClCompile Include="AutoRebindInjector.cpp" />
     <ClCompile Include="stdafx.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

@@ -3,13 +3,17 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.7.34024.191
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "HookTestInjector", "jailbreak\jailbreak.vcxproj", "{485DE09A-E290-4254-9009-B6211D27B407}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "HookTestInjector", "HookTestInjector\HookTestInjector.vcxproj", "{485DE09A-E290-4254-9009-B6211D27B407}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "HookTest", "jailbreakhook\jailbreakhook.vcxproj", "{A5A415CE-635A-45B4-99E9-5B68CF99CEC4}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "HookTest", "HookTest\HookTest.vcxproj", "{A5A415CE-635A-45B4-99E9-5B68CF99CEC4}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "R6FixInjector", "R6FixInjector\R6FixInjector.vcxproj", "{1412474A-F46A-43EA-ABC1-3F089AF79BB0}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "R6Fix", "R6Fix\R6Fix.vcxproj", "{1EAEB02B-263A-405B-BCF0-576F7918765E}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "AutoRebindInjector", "AutoRebindInjector\AutoRebindInjector.vcxproj", "{1593315B-CA5A-466A-80B5-C4C68BDAB3A5}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "AutoRebind", "AutoRebind\AutoRebind.vcxproj", "{C8B87C32-7BA8-4E2D-9655-7988C10AB979}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -51,6 +55,22 @@ Global
 		{1EAEB02B-263A-405B-BCF0-576F7918765E}.Release|Win32.Build.0 = Release|Win32
 		{1EAEB02B-263A-405B-BCF0-576F7918765E}.Release|x64.ActiveCfg = Release|x64
 		{1EAEB02B-263A-405B-BCF0-576F7918765E}.Release|x64.Build.0 = Release|x64
+		{1593315B-CA5A-466A-80B5-C4C68BDAB3A5}.Debug|Win32.ActiveCfg = Debug|Win32
+		{1593315B-CA5A-466A-80B5-C4C68BDAB3A5}.Debug|Win32.Build.0 = Debug|Win32
+		{1593315B-CA5A-466A-80B5-C4C68BDAB3A5}.Debug|x64.ActiveCfg = Debug|x64
+		{1593315B-CA5A-466A-80B5-C4C68BDAB3A5}.Debug|x64.Build.0 = Debug|x64
+		{1593315B-CA5A-466A-80B5-C4C68BDAB3A5}.Release|Win32.ActiveCfg = Release|Win32
+		{1593315B-CA5A-466A-80B5-C4C68BDAB3A5}.Release|Win32.Build.0 = Release|Win32
+		{1593315B-CA5A-466A-80B5-C4C68BDAB3A5}.Release|x64.ActiveCfg = Release|x64
+		{1593315B-CA5A-466A-80B5-C4C68BDAB3A5}.Release|x64.Build.0 = Release|x64
+		{C8B87C32-7BA8-4E2D-9655-7988C10AB979}.Debug|Win32.ActiveCfg = Debug|Win32
+		{C8B87C32-7BA8-4E2D-9655-7988C10AB979}.Debug|Win32.Build.0 = Debug|Win32
+		{C8B87C32-7BA8-4E2D-9655-7988C10AB979}.Debug|x64.ActiveCfg = Debug|x64
+		{C8B87C32-7BA8-4E2D-9655-7988C10AB979}.Debug|x64.Build.0 = Debug|x64
+		{C8B87C32-7BA8-4E2D-9655-7988C10AB979}.Release|Win32.ActiveCfg = Release|Win32
+		{C8B87C32-7BA8-4E2D-9655-7988C10AB979}.Release|Win32.Build.0 = Release|Win32
+		{C8B87C32-7BA8-4E2D-9655-7988C10AB979}.Release|x64.ActiveCfg = Release|x64
+		{C8B87C32-7BA8-4E2D-9655-7988C10AB979}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

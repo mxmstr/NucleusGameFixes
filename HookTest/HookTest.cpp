@@ -23,6 +23,8 @@
 #include <combaseapi.h>
 #include <wbemcli.h>
 #include <map>
+//#include <ntdef.h>
+//#include <winternl.h>
 using namespace std;
 
 unsigned char macAddress[6];
@@ -180,8 +182,12 @@ DWORD WINAPI MyGetAdaptersInfo(PIP_ADAPTER_INFO pAdapterInfo, PULONG pOutBufLen)
 {
     std::stringstream logMessage;
 
+    Log("MyGetAdaptersInfo");
+
     // Call the original GetAdaptersInfo function
-    //DWORD result = GetAdaptersInfo(pAdapterInfo, pOutBufLen);
+    DWORD result = GetAdaptersInfo(pAdapterInfo, pOutBufLen);
+
+    return result;
 
     //// Check if the call was successful
     //if (result == ERROR_SUCCESS)
@@ -339,57 +345,44 @@ SOCKET WINAPI MySocket(int af, int type, int protocol)
 
 int WINAPI MyBind(SOCKET s, const struct sockaddr* name, int namelen)
 {
-
     Log("MyBind");
-
-    std::stringstream logMessage;
-    logMessage << s << std::endl;
-    Log(logMessage.str());
 
     // Ensure the address is IPv4 (AF_INET)
     if (name->sa_family == AF_INET)
     {
+        sockaddr_in* sockaddrIPv4 = (sockaddr_in*)name;
+        char ipBuffer[INET_ADDRSTRLEN];
+        inet_ntop(AF_INET, &(sockaddrIPv4->sin_addr), ipBuffer, INET_ADDRSTRLEN);
+        USHORT port = ntohs(sockaddrIPv4->sin_port);
+
+        std::stringstream logMessage;
+        logMessage << "Bound IP Address: " << ipBuffer << std::endl;
+        logMessage << "Bound Port: " << port << std::endl;
+        Log(logMessage.str());
+
+
         struct sockaddr_in modified_addr = {};
         memcpy(&modified_addr, name, sizeof(modified_addr));
 
         // Set IP to 0.0.0.0
-        modified_addr.sin_addr.s_addr = htonl(INADDR_ANY);
-        //Log(targetIPAddress);
-        //inet_pton(AF_INET, targetIPAddress, &(modified_addr.sin_addr.s_addr));
+        //modified_addr.sin_addr.s_addr = htonl(INADDR_ANY);
+        modified_addr.sin_addr.s_addr = inet_addr(targetIPAddress);
 
         // Check the original port
         USHORT originalPort = ntohs(modified_addr.sin_port);
-        if (originalPort == 1200 || originalPort == 3074)
+        // Find the first available port starting from originalPort
+        for (USHORT port = originalPort; port < 65535; ++port)
         {
-            // Find the first available port starting from originalPort
-            for (USHORT port = originalPort; port < 65535; ++port)
+            modified_addr.sin_port = htons(port);
+            if (bind(s, (struct sockaddr*)&modified_addr, sizeof(modified_addr)) == 0)
             {
-                modified_addr.sin_port = htons(port);
-                if (bind(s, (struct sockaddr*)&modified_addr, sizeof(modified_addr)) == 0)
-                {
-                    // Successfully bound
-                    return 0;
-                }
+                // Successfully bound
+                return 0;
             }
+        }
 
-            // If no ports are available, return error
-            return SOCKET_ERROR;
-        }
-        else
-        {
-            //originalPort = 50000;
-            //// Find the first available port starting from originalPort
-            //for (USHORT port = originalPort; port < 65535; ++port)
-            //{
-            //    modified_addr.sin_port = htons(port);
-            //    if (bind(s, (struct sockaddr*)&modified_addr, sizeof(modified_addr)) == 0)
-            //    {
-            //        // Successfully bound
-            //        return 0;
-            //    }
-            //}
-            return bind(s, (struct sockaddr*)&modified_addr, sizeof(modified_addr));
-        }
+        // If no ports are available, return error
+        return SOCKET_ERROR;
     }
 
     // For other cases, proceed as normal
@@ -437,32 +430,61 @@ int WINAPI MyBind(SOCKET s, const struct sockaddr* name, int namelen)
 int WINAPI MyGetSockName(SOCKET s, struct sockaddr* name, int* namelen)
 {
     std::stringstream logMessage;
+
+    int result = getsockname(s, name, namelen);
+
     // Log information about the getsockname call
     logMessage << "getsockname intercepted!" << std::endl;
     logMessage << "Socket: " << s << std::endl;
 
-    int result = getsockname(s, name, namelen);
+    /*const sockaddr_in* addr = reinterpret_cast<const sockaddr_in*>(name);
+    char destAddrString[INET_ADDRSTRLEN];
+
+    if (inet_ntop(AF_INET, addr, destAddrString, INET_ADDRSTRLEN) != nullptr)
+    {
+        logMessage << "Address: " << destAddrString << std::endl;
+    }
+    else
+    {
+        logMessage << "inet_ntop error " << std::endl;
+    }*/
+
     //
     //
-    ///*if (inet_pton(AF_INET, "192.168.0.123", &(((struct sockaddr_in*)name)->sin_addr)) <= 0) {
-    //    logMessage << "error" << result << std::endl;
-    //}*/
+
+    std::string baseIP = "192.168.0.";
+
+    // Initialize random seed
+    std::srand(std::time(0));
+
+    // Generate a random number from 0 to 999
+    int lastDigits = std::rand() % 1000;
+
+    // Combine the base IP with the random last digits
+    std::string randomizedIP = baseIP + std::to_string(lastDigits);
+
+    std::cout << "Randomized IP Address: " << randomizedIP << std::endl;
+
+
+    if (inet_pton(AF_INET, randomizedIP.c_str(), &(((struct sockaddr_in*)name)->sin_addr)) <= 0) {
+        logMessage << "error" << result << std::endl;
+    }
     //
     //// Log information about the result and parameters
     //logMessage << "Result: " << result << std::endl;
     //
-    //if (result == 0) {
-    //    // Log the information returned by getsockname
-    //    char ipAddress[INET_ADDRSTRLEN];
-    //    inet_ntop(AF_INET, &(((struct sockaddr_in*)name)->sin_addr), ipAddress, INET_ADDRSTRLEN);
-    //
-    //    logMessage << "Address: " << ipAddress << std::endl;
-    //    logMessage << "Port: " << ntohs(((struct sockaddr_in*)name)->sin_port) << std::endl;
-    //}
-    //
-    //Log(logMessage.str());
+    if (result == 0) {
+        // Log the information returned by getsockname
+        char ipAddress[INET_ADDRSTRLEN];
+        inet_ntop(AF_INET, &(((struct sockaddr_in*)name)->sin_addr), ipAddress, INET_ADDRSTRLEN);
+    
+        logMessage << "Address: " << ipAddress << std::endl;
+        logMessage << "Port: " << ntohs(((struct sockaddr_in*)name)->sin_port) << std::endl;
+    }
+    
+    Log(logMessage.str());
 
-    return result;//WSAEFAULT;
+    return result;
 }
 
 void printRawBytes(const char* data, std::size_t size) {
@@ -538,18 +560,11 @@ int WINAPI MySendTo(SOCKET s, const char* buf, int len, int flags, const struct 
 
     // Check for the specific byte sequence
     const unsigned char JoinQueryHeader[] = {
-        0x00, 0x00, 0x00, 0x00, 0x6a, 0xb0, 0xc0, 0xf4, 0x00, 0x00, 0x00, 0x01,
-        0x00, 0x00, 0x00, 0x0b, 0x00, 0x02, 0x77, 0xc9, 0x00, 0x00, 0x00, 0x03,
-        0x00, 0x00, 0x00, 0x03, 0x00
+        0x0000006e,0x00000066,0x00000073,0x00000070,
+        0x00000073,0x00000032,0x0000002d,0x00000070
     };
 
-    const unsigned char JoinConfirmHeader[] = {
-        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xffffffe0, 0xffffffe5,
-        0x48, 0x04
-    };
-
-    const unsigned char ClientRequestFunction = 0x2c;
+    /*const unsigned char ClientRequestFunction = 0x2c;
     const unsigned char ServerResponseFunction = 0x37;
 
     static bool clientStarted = false;
@@ -558,86 +573,84 @@ int WINAPI MySendTo(SOCKET s, const char* buf, int len, int flags, const struct 
 
     static bool serverStarted = false;
     static unsigned char originalBytes2[6] = { 0 };
-    static unsigned char newBytes2[6] = { 0 };
+    static unsigned char newBytes2[6] = { 0 };*/
 
 
-    if (clientStarted || serverStarted) {
-        char* newBuffer = (char*)malloc(len);
-        memcpy(newBuffer, buf, len);
+    //if (clientStarted || serverStarted) {
+    //    char* newBuffer = (char*)malloc(len);
+    //    memcpy(newBuffer, buf, len);
 
-        /*if (clientStarted) {
-            for (int i = 0; i <= len - 6; ++i) {
-                if (memcmp(newBuffer + i, originalBytes1, 6) == 0) {
-                    const unsigned char newBytes[] = { 0xffffffad, 0x00000055, 0x00000036, 0xffffffa5, 0xffffffa5, 0xffffffa8 };
-                    memcpy(newBuffer + i, newBytes, 6);
-                }
-            }
-        }
-        if (serverStarted) {
-            for (int i = 0; i <= len - 6; ++i) {
-                if (memcmp(newBuffer + i, originalBytes2, 6) == 0) {
-                    const unsigned char newBytes[] = { 0xaa, 0x5a, 0x6d, 0x4b, 0x4b, 0x50 };
-                    memcpy(newBuffer + i, newBytes, 6);
-                }
-            }
-        }*/
-        printRawBytes(newBuffer, len);
-        int result = sendto(s, newBuffer, len, flags, to, tolen);
-        free(newBuffer);
-        return result;
-    }
+    //    /*if (clientStarted) {
+    //        for (int i = 0; i <= len - 6; ++i) {
+    //            if (memcmp(newBuffer + i, originalBytes1, 6) == 0) {
+    //                const unsigned char newBytes[] = { 0xffffffad, 0x00000055, 0x00000036, 0xffffffa5, 0xffffffa5, 0xffffffa8 };
+    //                memcpy(newBuffer + i, newBytes, 6);
+    //            }
+    //        }
+    //    }
+    //    if (serverStarted) {
+    //        for (int i = 0; i <= len - 6; ++i) {
+    //            if (memcmp(newBuffer + i, originalBytes2, 6) == 0) {
+    //                const unsigned char newBytes[] = { 0xaa, 0x5a, 0x6d, 0x4b, 0x4b, 0x50 };
+    //                memcpy(newBuffer + i, newBytes, 6);
+    //            }
+    //        }
+    //    }*/
+    //    printRawBytes(newBuffer, len);
+    //    int result = sendto(s, newBuffer, len, flags, to, tolen);
+    //    free(newBuffer);
+    //    return result;
+    //}
 
 
     if (len > sizeof(JoinQueryHeader) && std::memcmp(buf, JoinQueryHeader, sizeof(JoinQueryHeader)) == 0) {
 
-        unsigned char nextByte = buf[sizeof(JoinQueryHeader)];
+        static unsigned char newBytes1[1] = { 0 };
+        
+        char* newBuffer = (char*)malloc(len);
+        memcpy(newBuffer, buf, len);
 
-        if (nextByte == ClientRequestFunction) {
-            Log("Client Request");
-
-            char* newBuffer = (char*)malloc(len);
-            memcpy(newBuffer, buf, len);
-
-            // Capture the original bytes
-            memcpy(originalBytes1, newBuffer + 68, 6);
-
-            // Generate random bytes
-            /*std::random_device rd;
-            std::mt19937 gen(rd());
-            std::uniform_int_distribution<> dis(0, 255);
-            for (int i = 0; i < 6; ++i) {
-                newBytes1[i] = static_cast<unsigned char>(dis(gen));
-            }*/
-
-            // Replace with new random bytes
-            //memcpy(newBuffer + 68, newBytes1, 6);
-            const unsigned char newBytes[] = { 0xffffffad, 0x00000055, 0x00000036, 0xffffffa5, 0xffffffa5, 0xffffffa8 };
-            //memcpy(newBuffer + 68, newBytes, 6);
-
-            clientStarted = true;
-
-            printRawBytes(newBuffer, len);
-            int result = sendto(s, newBuffer, len, flags, to, tolen);
-            free(newBuffer);
-
-            return result;
+        // Generate random bytes
+        std::random_device rd;
+        std::mt19937 gen(rd());
+        std::uniform_int_distribution<> dis(0, 255);
+        for (int i = 0; i < 1; ++i) {
+            newBytes1[i] = static_cast<unsigned char>(dis(gen));
         }
-        //if (nextByte == ClientRequestFunction) {//&& strcmp(inet_ntoa(localAddress->sin_addr), targetIPAddress) != 0) {
+
+        memcpy(newBuffer + 8, newBytes1, 1);
+
+        printRawBytes(newBuffer, len);
+        int result = sendto(s, newBuffer, len, flags, to, tolen);
+        free(newBuffer);
+
+        return result;
+
+        //unsigned char nextByte = buf[sizeof(JoinQueryHeader)];
+
+        //if (nextByte == ClientRequestFunction) {
         //    Log("Client Request");
 
         //    char* newBuffer = (char*)malloc(len);
         //    memcpy(newBuffer, buf, len);
 
-        //    /*const unsigned char newBytesA[] = { 0xffffff88 };
-        //    std::memcpy(newBuffer + 56, newBytesA, sizeof(newBytesA));*/
-        //    
-        //    const unsigned char newBytesB[] = { 0xffffffad, 0x00000055, 0x00000036, 0xffffffa5, 0xffffffa5, 0xffffffa8 };
-        //    std::memcpy(newBuffer + 68, newBytesB, sizeof(newBytesB));
+        //    // Capture the original bytes
+        //    memcpy(originalBytes1, newBuffer + 68, 6);
 
-        //    //////const unsigned char newBytes[] = { 0x04, 0x31, 0xad, 0x55, 0x36, 0xa5, 0xa5, 0xa8 };
-        //    //const unsigned char newBytes[] = { 0x00 };//, 0x00, 0x00, 0x00, 0x00, 0x00 };
-        //    ////const unsigned char newBytes[] = { 0x55, 0xad, 0x36, 0xa5, 0xa5, 0xa8 };
-        //    //std::memcpy(newBuffer + 68, newBytes, sizeof(newBytes));
+        //    // Generate random bytes
+        //    /*std::random_device rd;
+        //    std::mt19937 gen(rd());
+        //    std::uniform_int_distribution<> dis(0, 255);
+        //    for (int i = 0; i < 6; ++i) {
+        //        newBytes1[i] = static_cast<unsigned char>(dis(gen));
+        //    }*/
+
+        //    // Replace with new random bytes
+        //    //memcpy(newBuffer + 68, newBytes1, 6);
+        //    const unsigned char newBytes[] = { 0xffffffad, 0x00000055, 0x00000036, 0xffffffa5, 0xffffffa5, 0xffffffa8 };
+        //    //memcpy(newBuffer + 68, newBytes, 6);
+
+        //    clientStarted = true;
 
         //    printRawBytes(newBuffer, len);
         //    int result = sendto(s, newBuffer, len, flags, to, tolen);
@@ -645,22 +658,75 @@ int WINAPI MySendTo(SOCKET s, const char* buf, int len, int flags, const struct 
 
         //    return result;
         //}
+        ////if (nextByte == ClientRequestFunction) {//&& strcmp(inet_ntoa(localAddress->sin_addr), targetIPAddress) != 0) {
+        ////    Log("Client Request");
+
+        ////    char* newBuffer = (char*)malloc(len);
+        ////    memcpy(newBuffer, buf, len);
+
+        ////    /*const unsigned char newBytesA[] = { 0xffffff88 };
+        ////    std::memcpy(newBuffer + 56, newBytesA, sizeof(newBytesA));*/
+        ////    
+        ////    const unsigned char newBytesB[] = { 0xffffffad, 0x00000055, 0x00000036, 0xffffffa5, 0xffffffa5, 0xffffffa8 };
+        ////    std::memcpy(newBuffer + 68, newBytesB, sizeof(newBytesB));
+
+        ////    //////const unsigned char newBytes[] = { 0x04, 0x31, 0xad, 0x55, 0x36, 0xa5, 0xa5, 0xa8 };
+        ////    //const unsigned char newBytes[] = { 0x00 };//, 0x00, 0x00, 0x00, 0x00, 0x00 };
+        ////    ////const unsigned char newBytes[] = { 0x55, 0xad, 0x36, 0xa5, 0xa5, 0xa8 };
+        ////    //std::memcpy(newBuffer + 68, newBytes, sizeof(newBytes));
+
+        ////    printRawBytes(newBuffer, len);
+        ////    int result = sendto(s, newBuffer, len, flags, to, tolen);
+        ////    free(newBuffer);
+
+        ////    return result;
+        ////}
+        ////else if (nextByte == ServerResponseFunction) {
+        ////    Log("Server Response");
+        ////    // 78 -> 0x10
+        ////    // 90 -> 0000005a ffffffaa 0000006d 0000004b 0000004b 00000050
+
+        ////    char* newBuffer = (char*)malloc(len);
+        ////    memcpy(newBuffer, buf, len);
+
+        ////    /*const unsigned char newBytesA[] = { 0xffffffb7, 0xffffffd4, 0xffffffb8, 0xfffffffd, 0x00000050 };
+        ////    std::memcpy(newBuffer + 45, newBytesA, sizeof(newBytesA));*/
+
+        ////    /*const unsigned char newBytesA[] = { 0x10 };
+        ////    std::memcpy(newBuffer + 78, newBytesA, sizeof(newBytesA));*/
+
+        ////    const unsigned char newBytesB[] = { 0xaa, 0x5a, 0x6d, 0x4b, 0x4b, 0x50 };
+        ////    std::memcpy(newBuffer + 90, newBytesB, sizeof(newBytesB));
+
+        ////    printRawBytes(newBuffer, len);
+        ////    int result = sendto(s, newBuffer, len, flags, to, tolen);
+        ////    free(newBuffer);
+
+        ////    return result;
+        ////}
         //else if (nextByte == ServerResponseFunction) {
         //    Log("Server Response");
-        //    // 78 -> 0x10
-        //    // 90 -> 0000005a ffffffaa 0000006d 0000004b 0000004b 00000050
 
         //    char* newBuffer = (char*)malloc(len);
         //    memcpy(newBuffer, buf, len);
 
-        //    /*const unsigned char newBytesA[] = { 0xffffffb7, 0xffffffd4, 0xffffffb8, 0xfffffffd, 0x00000050 };
-        //    std::memcpy(newBuffer + 45, newBytesA, sizeof(newBytesA));*/
+        //    // Capture the original bytes
+        //    memcpy(originalBytes2, newBuffer + 90, 6);
 
-        //    /*const unsigned char newBytesA[] = { 0x10 };
-        //    std::memcpy(newBuffer + 78, newBytesA, sizeof(newBytesA));*/
+        //    // Generate random bytes
+        //    /*std::random_device rd;
+        //    std::mt19937 gen(rd());
+        //    std::uniform_int_distribution<> dis(0, 255);
+        //    for (int i = 0; i < 6; ++i) {
+        //        newBytes2[i] = static_cast<unsigned char>(dis(gen));
+        //    }*/
 
-        //    const unsigned char newBytesB[] = { 0xaa, 0x5a, 0x6d, 0x4b, 0x4b, 0x50 };
-        //    std::memcpy(newBuffer + 90, newBytesB, sizeof(newBytesB));
+        //    // Replace with new random bytes
+        //    //memcpy(newBuffer + 90, newBytes2, 6);
+        //    const unsigned char newBytes[] = { 0xaa, 0x5a, 0x6d, 0x4b, 0x4b, 0x50 };
+        //    //std::memcpy(newBuffer + 90, newBytes, 6);
+
+        //    serverStarted = true;
 
         //    printRawBytes(newBuffer, len);
         //    int result = sendto(s, newBuffer, len, flags, to, tolen);
@@ -668,36 +734,6 @@ int WINAPI MySendTo(SOCKET s, const char* buf, int len, int flags, const struct 
 
         //    return result;
         //}
-        else if (nextByte == ServerResponseFunction) {
-            Log("Server Response");
-
-            char* newBuffer = (char*)malloc(len);
-            memcpy(newBuffer, buf, len);
-
-            // Capture the original bytes
-            memcpy(originalBytes2, newBuffer + 90, 6);
-
-            // Generate random bytes
-            /*std::random_device rd;
-            std::mt19937 gen(rd());
-            std::uniform_int_distribution<> dis(0, 255);
-            for (int i = 0; i < 6; ++i) {
-                newBytes2[i] = static_cast<unsigned char>(dis(gen));
-            }*/
-
-            // Replace with new random bytes
-            //memcpy(newBuffer + 90, newBytes2, 6);
-            const unsigned char newBytes[] = { 0xaa, 0x5a, 0x6d, 0x4b, 0x4b, 0x50 };
-            //std::memcpy(newBuffer + 90, newBytes, 6);
-
-            serverStarted = true;
-
-            printRawBytes(newBuffer, len);
-            int result = sendto(s, newBuffer, len, flags, to, tolen);
-            free(newBuffer);
-
-            return result;
-        }
     }
     //else if (len > sizeof(JoinConfirmHeader) && std::memcmp(buf, JoinConfirmHeader, sizeof(JoinConfirmHeader)) == 0) {
 
@@ -824,17 +860,17 @@ int WINAPI MyRecvFrom(SOCKET s, char* buf, int len, int flags, struct sockaddr* 
 
     sockaddr_in* localAddress = reinterpret_cast<sockaddr_in*>(from);
 
-    if (strcmp(inet_ntoa(localAddress->sin_addr), targetIPAddress) == 0)
-        return WSAETIMEDOUT;
+    /*if (strcmp(inet_ntoa(localAddress->sin_addr), targetIPAddress) == 0)
+        return WSAETIMEDOUT;*/
 
-    /*logMessage << "MyRecvFrom Local Address: " << inet_ntoa(localAddress->sin_addr) << std::endl;
+    logMessage << "MyRecvFrom Local Address: " << inet_ntoa(localAddress->sin_addr) << std::endl;
     logMessage << "MyRecvFrom Local Port: " << ntohs(localAddress->sin_port) << std::endl;
     logMessage << "MyRecvFrom Family: " << ntohs(localAddress->sin_family) << std::endl;
     logMessage << "MyRecvFrom: socket - " << s << std::endl;
     printRawBytes(buf, len);
     logMessage << "MyRecvFrom: Length - " << len << std::endl;
     logMessage << "MyRecvFrom: Flags - " << flags << std::endl;
-    logMessage << "MyRecvFrom: From length - " << fromlen << std::endl;*/
+    logMessage << "MyRecvFrom: From length - " << fromlen << std::endl;
 
 
     // Check for the specific byte sequence
@@ -961,7 +997,7 @@ int WINAPI MyRecvFrom(SOCKET s, char* buf, int len, int flags, struct sockaddr* 
     logMessage << "MyRecvFrom: Flags 2 - " << flags << std::endl;
     logMessage << "MyRecvFrom: From length 2 - " << fromlen << std::endl;*/
 
-    //Log(logMessage.str());
+    Log(logMessage.str());
 
     return result;
 }
@@ -1129,16 +1165,16 @@ DWORD WINAPI MyGetIpNetTable2(ADDRESS_FAMILY Family, PMIB_IPNET_TABLE2* Table)
     return result;
 }
 
-DWORD WINAPI MyGetOwnerModuleFromUdpEntry(PMIB_UDPROW_OWNER_MODULE pUdpEntry, TCPIP_OWNER_MODULE_INFO_CLASS Class, PVOID pBuffer, PDWORD pdwSize)
-{
-    std::stringstream logMessage;
-
-    DWORD result = GetOwnerModuleFromUdpEntry(pUdpEntry, Class, pBuffer, pdwSize);
-
-    Log(logMessage.str());
-
-    return result;
-}
+//DWORD WINAPI MyGetOwnerModuleFromUdpEntry(PMIB_UDPROW_OWNER_MODULE pUdpEntry, TCPIP_OWNER_MODULE_INFO_CLASS Class, PVOID pBuffer, PDWORD pdwSize)
+//{
+//    std::stringstream logMessage;
+//
+//    DWORD result = GetOwnerModuleFromUdpEntry(pUdpEntry, Class, pBuffer, pdwSize);
+//
+//    Log(logMessage.str());
+//
+//    return result;
+//}
 
 DWORD WINAPI MyGetPerAdapterInfo(ULONG IfIndex, PIP_PER_ADAPTER_INFO pPerAdapterInfo, PULONG pOutBufLen)
 {
@@ -1205,23 +1241,23 @@ int MyGetHostName(char* name, int namelen)
     //originalHostname[namelen - 1] = '\0'; // Ensure null-termination
 
     // Assign a custom value to the name field
-    strncpy(name, targetHostname, namelen - 1);
-    name[namelen - 1] = '\0'; // Ensure null-termination
-    
-    // Log the modified host name
-    Log("Modified Host Name:");
-    Log(name);
+    //strncpy(name, targetHostname, namelen - 1);
+    //name[namelen - 1] = '\0'; // Ensure null-termination
+    //
+    //// Log the modified host name
+    //Log("Modified Host Name:");
+    //Log(name);
 
     return result;
 }
 
-hostent* MyGetHostByName(const char* name)
+hostent* WSAAPI MyGetHostByName(const char* name)
 {
     Log("MyGetHostByName");
     std::stringstream logMessage;
     // Call the original gethostbyname function
     hostent* result = gethostbyname(name);
-    // 
+     
     // Allocate memory for the custom hostent structure
     //hostent* customHostEnt = new hostent;
     //
@@ -1232,9 +1268,24 @@ hostent* MyGetHostByName(const char* name)
     //customHostEnt->h_length = sizeof(in_addr);    // Length of address
     //customHostEnt->h_addr_list = new char* [2];    // Allocate an array of pointers
     //
+
+    //std::string baseIP = "192.168.0.";
+
+    //// Initialize random seed
+    //std::srand(std::time(0));
+
+    //// Generate a random number from 0 to 999
+    //int lastDigits = std::rand() % 1000;
+
+    //// Combine the base IP with the random last digits
+    //std::string randomizedIP = baseIP + std::to_string(lastDigits);
+
+    //std::cout << "Randomized IP Address: " << randomizedIP << std::endl;
+
+
     //// Allocate memory for the custom IP address and copy it
     //in_addr customAddress;
-    //inet_pton(AF_INET, targetIPAddress, &customAddress);
+    //inet_pton(AF_INET, randomizedIP.c_str(), &customAddress);
     //customHostEnt->h_addr_list[0] = new char[sizeof(in_addr)];
     //memcpy(customHostEnt->h_addr_list[0], &customAddress, sizeof(in_addr));
 
@@ -1243,21 +1294,19 @@ hostent* MyGetHostByName(const char* name)
 
     // Access and print the custom hostent information
     logMessage << "Original Host Name: " << name << std::endl;
-    //logMessage << "Custom Host Name: " << customHostEnt->h_name << std::endl;
-    //logMessage << "Custom IP Address: " << inet_ntoa(customAddress) << std::endl;
-    //
-    //// Clean up memory
-    //delete[] customHostEnt->h_name;
-    //delete[] customHostEnt->h_addr_list[0];
-    //delete[] customHostEnt->h_addr_list;
-    //delete customHostEnt;
+    /*logMessage << "Custom Host Name: " << customHostEnt->h_name << std::endl;
+    logMessage << "Custom IP Address: " << inet_ntoa(customAddress) << std::endl;
+    */
+    // Clean up memory
+    /*delete[] customHostEnt->h_name;
+    delete[] customHostEnt->h_addr_list[0];
+    delete[] customHostEnt->h_addr_list;
+    delete customHostEnt;*/
 
     Log(logMessage.str());
 
     return result;
 }
-
-
 
 hostent* WINAPI MyGetHostByAddr(const char* addr, int len, int type)
 {
@@ -1564,7 +1613,42 @@ int WINAPI MyWSARecv(SOCKET s, LPWSABUF lpBuffers, DWORD dwBufferCount, LPDWORD 
 int WINAPI MyWSARecvFrom(SOCKET s, LPWSABUF lpBuffers, DWORD dwBufferCount, LPDWORD lpNumberOfBytesRecvd, LPDWORD lpFlags, struct sockaddr* lpFrom, LPINT lpFromlen, LPWSAOVERLAPPED lpOverlapped, LPWSAOVERLAPPED_COMPLETION_ROUTINE lpCompletionRoutine)
 {
     Log("MyWSARecvFrom");
-    return WSARecvFrom(s, lpBuffers, dwBufferCount, lpNumberOfBytesRecvd, lpFlags, lpFrom, lpFromlen, lpOverlapped, lpCompletionRoutine);
+
+    std::stringstream logMessage;
+
+    int result = WSARecvFrom(s, lpBuffers, dwBufferCount, lpNumberOfBytesRecvd, lpFlags, lpFrom, lpFromlen, lpOverlapped, lpCompletionRoutine);
+
+    // Check for any errors
+    //if (result != 0) {
+    //    // Handle error
+    //    Log("MyWSARecvFrom socket error");
+    //    return result;
+    //}
+
+    // Log sender's address and port
+    if (lpFrom->sa_family == AF_INET) { // IPv4
+        struct sockaddr_in* ipv4 = (struct sockaddr_in*)lpFrom;
+        char addr[INET_ADDRSTRLEN];
+        inet_ntop(AF_INET, &(ipv4->sin_addr), addr, INET_ADDRSTRLEN);
+        int port = ntohs(ipv4->sin_port);
+        logMessage << "Sender's Address: " << addr << endl;
+        logMessage << "Sender's Port: " << port << endl;
+    }
+    // Add similar block for IPv6 if needed
+
+    // Log payload bytes
+    
+
+    if (lpNumberOfBytesRecvd && *lpNumberOfBytesRecvd > 0) {
+        for (DWORD i = 0; i < dwBufferCount; ++i) {
+            printRawBytes(lpBuffers[i].buf, lpBuffers[i].len);
+            //logMessage << "Payload: " << lpBuffers[i].buf << " Length: " << lpBuffers[i].len;
+        }
+    }
+
+    Log(logMessage.str());
+
+    return result;
 }
 
 int WINAPI MyWSASend(SOCKET s, LPWSABUF lpBuffers, DWORD dwBufferCount, LPDWORD lpNumberOfBytesSent, DWORD dwFlags, LPWSAOVERLAPPED lpOverlapped, LPWSAOVERLAPPED_COMPLETION_ROUTINE lpCompletionRoutine)
@@ -1633,6 +1717,8 @@ INT WINAPI MyGetAddrInfo(PCSTR pNodeName, PCSTR pServiceName, const ADDRINFOA* p
     // Call the original getaddrinfo function
     INT result = getaddrinfo(originalHostname, pServiceName, pHints, ppResult);
 
+    return -1;
+
     // Log after the getaddrinfo call
     Log("getaddrinfo");
     Log(originalHostname);
@@ -1644,27 +1730,27 @@ INT WINAPI MyGetAddrInfo(PCSTR pNodeName, PCSTR pServiceName, const ADDRINFOA* p
         PADDRINFOA pCurrent = *ppResult;
         PADDRINFOA pPrev = nullptr;
 
-    //    while (pCurrent != nullptr)
-    //    {
-    //        sockaddr* sa = pCurrent->ai_addr;
+        while (pCurrent != nullptr)
+        {
+            sockaddr* sa = pCurrent->ai_addr;
 
-    //        if (sa->sa_family == AF_INET) {
-    //            const sockaddr_in* sa4 = reinterpret_cast<const sockaddr_in*>(sa);
-    //            char ip4[INET_ADDRSTRLEN];
-    //            inet_ntop(AF_INET, &(sa4->sin_addr), ip4, INET_ADDRSTRLEN);
+            if (sa->sa_family == AF_INET) {
+                const sockaddr_in* sa4 = reinterpret_cast<const sockaddr_in*>(sa);
+                char ip4[INET_ADDRSTRLEN];
+                inet_ntop(AF_INET, &(sa4->sin_addr), ip4, INET_ADDRSTRLEN);
 
-    //            // Check if the current result matches the specified IPv4 address
-    //            if (strcmp(ip4, targetIPAddress) == 0) {
-    //                pCurrent->ai_next = nullptr;
-    //                *ppResult = pCurrent;
-    //                break;
-    //            }
-    //        }
+                // Check if the current result matches the specified IPv4 address
+                if (strcmp(ip4, targetIPAddress) == 0) {
+                    pCurrent->ai_next = nullptr;
+                    *ppResult = pCurrent;
+                    break;
+                }
+            }
 
-    //        pCurrent = pCurrent->ai_next;
-    //    }
+            pCurrent = pCurrent->ai_next;
+        }
 
-    //    pCurrent = *ppResult;
+        pCurrent = *ppResult;
 
         while (pCurrent != nullptr) {
             sockaddr* sa = pCurrent->ai_addr;
@@ -1694,6 +1780,8 @@ INT WINAPI MyGetAddrInfoW(PCWSTR pNodeName, PCWSTR pServiceName, const ADDRINFOW
     // Call the original getaddrinfo function
     INT result = GetAddrInfoW(myWideString.c_str(), pServiceName, pHints, ppResult);
 
+    return -1;
+
     //// Log after the getaddrinfo call
     Log("GetAddrInfoW");
     LogW(myWideString.c_str());
@@ -1704,27 +1792,27 @@ INT WINAPI MyGetAddrInfoW(PCWSTR pNodeName, PCWSTR pServiceName, const ADDRINFOW
         PADDRINFOW pCurrent = *ppResult;
         PADDRINFOW pPrev = nullptr;
 
-        //    while (pCurrent != nullptr)
-        //    {
-        //        sockaddr* sa = pCurrent->ai_addr;
+        while (pCurrent != nullptr)
+        {
+            sockaddr* sa = pCurrent->ai_addr;
 
-        //        if (sa->sa_family == AF_INET) {
-        //            const sockaddr_in* sa4 = reinterpret_cast<const sockaddr_in*>(sa);
-        //            char ip4[INET_ADDRSTRLEN];
-        //            inet_ntop(AF_INET, &(sa4->sin_addr), ip4, INET_ADDRSTRLEN);
+            if (sa->sa_family == AF_INET) {
+                const sockaddr_in* sa4 = reinterpret_cast<const sockaddr_in*>(sa);
+                char ip4[INET_ADDRSTRLEN];
+                inet_ntop(AF_INET, &(sa4->sin_addr), ip4, INET_ADDRSTRLEN);
 
-        //            // Check if the current result matches the specified IPv4 address
-        //            if (strcmp(ip4, targetIPAddress) == 0) {
-        //                pCurrent->ai_next = nullptr;
-        //                *ppResult = pCurrent;
-        //                break;
-        //            }
-        //        }
+                // Check if the current result matches the specified IPv4 address
+                if (strcmp(ip4, targetIPAddress) == 0) {
+                    pCurrent->ai_next = nullptr;
+                    *ppResult = pCurrent;
+                    break;
+                }
+            }
 
-        //        pCurrent = pCurrent->ai_next;
-        //    }
+            pCurrent = pCurrent->ai_next;
+        }
 
-        //    pCurrent = *ppResult;
+        pCurrent = *ppResult;
 
         while (pCurrent != nullptr) {
             sockaddr* sa = pCurrent->ai_addr;
@@ -1750,6 +1838,8 @@ INT WINAPI MyGetAddrInfoW(PCWSTR pNodeName, PCWSTR pServiceName, const ADDRINFOW
 INT WINAPI MyGetAddrInfoExW(PCWSTR pName, PCWSTR pServiceName, DWORD dwNameSpace, LPGUID lpNspId, const ADDRINFOEXW* hints, PADDRINFOEXW* ppResult, timeval* timeout, LPOVERLAPPED lpOverlapped, LPLOOKUPSERVICE_COMPLETION_ROUTINE lpCompletionRoutine, LPHANDLE lpHandle)
 {
     Log("GetAddrInfoExW");
+
+    return -1;
 
     INT result = GetAddrInfoExW(pName, pServiceName, dwNameSpace, lpNspId, hints, ppResult, timeout, lpOverlapped, lpCompletionRoutine, lpHandle);
 
@@ -1923,6 +2013,8 @@ INT WINAPI MyWSALookupServiceNextA(HANDLE hLookup,DWORD dwControlFlags,LPDWORD l
 
     std::stringstream logMessage;
 
+    return -1;
+
     // Call the original function
     INT result = WSALookupServiceNextA(hLookup, dwControlFlags, lpdwBufferLength, lpqsResults);
 
@@ -1958,6 +2050,8 @@ INT WINAPI MyWSALookupServiceNextW(HANDLE hLookup, DWORD dwControlFlags, LPDWORD
     Log("MyWSALookupServiceNextW");
 
     std::stringstream logMessage;
+
+    return -1;
 
     // Call the original function
     INT result = WSALookupServiceNextW(hLookup, dwControlFlags, lpdwBufferLength, lpqsResults);
@@ -1995,10 +2089,12 @@ DWORD WINAPI MyGetUnicastIpAddressTable(DWORD Family,PMIB_UNICASTIPADDRESS_TABLE
 
     std::stringstream logMessage;
 
-    return ERROR_NOT_FOUND;
+    //return ERROR_NOT_FOUND;
 
     // Call the original function
-    //DWORD result = GetUnicastIpAddressTable(Family, Table);
+    DWORD result = GetUnicastIpAddressTable(Family, Table);
+
+    return result;
 
     //if (result == NO_ERROR)
     //{
@@ -2516,6 +2612,71 @@ HRESULT WINAPI MyCoInitializeEx(LPVOID pvReserved, DWORD dwCoInit)
     return CoInitializeEx(pvReserved, dwCoInit);
 }
 
+class MyEnumWbemClassObjectDecorator : public IEnumWbemClassObject {
+private:
+    IEnumWbemClassObject* m_decorated;  // Pointer to the decorated IEnumWbemClassObject instance
+
+public:
+    // Constructor
+    MyEnumWbemClassObjectDecorator(IEnumWbemClassObject* decorated) : m_decorated(decorated) {}
+
+    HRESULT STDMETHODCALLTYPE Clone(IEnumWbemClassObject** ppEnum) {
+        Log("Clone");
+        return m_decorated->Clone(ppEnum);
+    }
+
+    HRESULT STDMETHODCALLTYPE Next(long lTimeout, ULONG uCount, IWbemClassObject** apObjects, ULONG* puReturned) {
+        Log("Next");
+        return m_decorated->Next(lTimeout, uCount, apObjects, puReturned);
+    }
+
+    HRESULT STDMETHODCALLTYPE NextAsync(ULONG uCount, IWbemObjectSink* pSink) {
+        Log("NextAsync");
+        return m_decorated->NextAsync(uCount, pSink);
+    }
+
+    HRESULT STDMETHODCALLTYPE Reset() {
+        Log("Reset");
+        return m_decorated->Reset();
+    }
+
+    HRESULT STDMETHODCALLTYPE Skip(long lTimeout, ULONG nCount) {
+        Log("Skip");
+        return m_decorated->Skip(lTimeout, nCount);
+    }
+
+    // Implement IUnknown methods
+    ULONG STDMETHODCALLTYPE AddRef() {
+        return m_decorated->AddRef();
+    }
+
+    ULONG STDMETHODCALLTYPE Release() {
+        ULONG count = m_decorated->Release();
+        if (count == 0) {
+            delete this;
+        }
+        return count;
+    }
+
+    HRESULT STDMETHODCALLTYPE QueryInterface(REFIID riid, void** ppv) {
+        if (riid == __uuidof(IWbemLocator) || riid == IID_IUnknown) {
+            *ppv = this;
+            AddRef();
+            return S_OK;
+        }
+        else {
+            return m_decorated->QueryInterface(riid, ppv);
+        }
+    }
+
+    // Destructor
+    ~MyEnumWbemClassObjectDecorator() {
+        m_decorated->Release();
+    }
+};
+
+
+
 class MyWbemServicesDecorator : public IWbemServices {
 private:
     IWbemServices* m_decorated;  // Pointer to the decorated IWbemServices instance
@@ -2601,7 +2762,16 @@ public:
 
     HRESULT STDMETHODCALLTYPE CreateInstanceEnum(const BSTR strClass, long lFlags, IWbemContext* pCtx, IEnumWbemClassObject** ppEnum) {
         Log("CreateInstanceEnum");
-        return m_decorated->CreateInstanceEnum(strClass, lFlags, pCtx, ppEnum);
+        HRESULT hr = m_decorated->CreateInstanceEnum(strClass, lFlags, pCtx, ppEnum);
+        if (SUCCEEDED(hr)) {
+            Log("CreateInstanceEnum success");
+            if (ppEnum != nullptr) {
+                Log("CreateInstanceEnum decorator");
+                IEnumWbemClassObject* original = *ppEnum;
+                *ppEnum = new MyEnumWbemClassObjectDecorator(original);
+            }
+        }
+        return hr;
     }
 
     HRESULT STDMETHODCALLTYPE CreateInstanceEnumAsync(const BSTR strClass, long lFlags, IWbemContext* pCtx, IWbemObjectSink* pResponseHandler) {
@@ -2768,21 +2938,24 @@ HRESULT WINAPI MyCoCreateInstance(REFCLSID rclsid, LPUNKNOWN pUnkOuter, DWORD dw
 {
     Log("CoCreateInstance");
 
-    //return REGDB_E_CLASSNOTREG;
+    return REGDB_E_CLASSNOTREG;
 
     WCHAR guidString[40] = { 0 };
     StringFromGUID2(riid, guidString, 40);
 
-    std::wstringstream logMessage;
+    /*std::wstringstream logMessage;
     logMessage << L"CoCreateInstance called. Requested interface IID: " << guidString;
-    LogW(logMessage.str());
+    LogW(logMessage.str());*/
 
     HRESULT result = CoCreateInstance(rclsid, pUnkOuter, dwClsContext, riid, ppv);
 
-    if (SUCCEEDED(result) && riid == __uuidof(IWbemLocator)) {
-        Log("Decorator");
-        IWbemLocator* original = static_cast<IWbemLocator*>(*ppv);
-        *ppv = new MyWbemLocatorDecorator(original);
+    if (SUCCEEDED(result)) {
+        //Log("Success");
+        if (riid == __uuidof(IWbemLocator)) {
+            //Log("Decorator");
+            IWbemLocator* original = static_cast<IWbemLocator*>(*ppv);
+            *ppv = new MyWbemLocatorDecorator(original);
+        }
     }
 
     return result;
@@ -2812,6 +2985,7 @@ HRESULT WINAPI MyCoCreateInstance(REFCLSID rclsid, LPUNKNOWN pUnkOuter, DWORD dw
 HRESULT WINAPI MyCoCreateInstanceEx(REFCLSID Clsid, IUnknown* punkOuter, DWORD dwClsCtx, COSERVERINFO* pServerInfo, DWORD dwCount, MULTI_QI* pResults)
 {
     Log("CoCreateInstanceEx");
+    return REGDB_E_CLASSNOTREG;
     return CoCreateInstanceEx(Clsid, punkOuter, dwClsCtx, pServerInfo, dwCount, pResults);
 }
 
@@ -2837,13 +3011,244 @@ void GenerateRandomMACAddress(unsigned char* macAddress) {
     //macAddress[0] = macAddress[0] | 0x02;
 }
 
+
+//HWND WINAPI GetForegroundWindow_Hook()
+//{
+//    return Globals::hWnd;
+//}
+//
+//HWND WINAPI WindowFromPoint_Hook(POINT Point)
+//{
+//    return Globals::hWnd;
+//}
+//
+//HWND WINAPI GetActiveWindow_Hook()
+//{
+//    return Globals::hWnd;
+//}
+
+BOOL WINAPI IsWindowEnabled_Hook(HWND hWnd)
+{
+    return TRUE;
+}
+
+//HWND WINAPI GetFocus_Hook()
+//{
+//    return Globals::hWnd;
+//}
+//
+//HWND WINAPI GetCapture_Hook()
+//{
+//    return Globals::hWnd;
+//}
+
+HWND WINAPI SetCapture_Hook(HWND inputHwnd)
+{
+    return inputHwnd;
+    //return NULL;
+}
+
+BOOL WINAPI ReleaseCapture_Hook()
+{
+    return TRUE;
+}
+
+HWND WINAPI SetActiveWindow_Hook(
+    HWND input
+)
+{
+    return input;
+}
+
+HWND WINAPI SetFocus_Hook(
+    HWND input
+)
+{
+    return input;
+}
+
+BOOL WINAPI SetForegroundWindow_Hook(
+    HWND hWnd
+)
+{
+    return true;
+}
+
+DWORD WINAPI MyGetAnycastIpAddressTable(ADDRESS_FAMILY Family, PMIB_ANYCASTIPADDRESS_TABLE* Table)
+{
+    Log("GetAnycastIpAddressTable");
+    return GetAnycastIpAddressTable(Family, Table);
+}
+
+DWORD WINAPI MyGetBestRoute(DWORD dwDestAddr,DWORD dwSourceAddr,PMIB_IPFORWARDROW pBestRoute)
+{
+    Log("GetBestRoute");
+    return GetBestRoute(dwDestAddr, dwSourceAddr, pBestRoute);
+}
+
+DWORD WINAPI MyGetBestRoute2(NET_LUID* InterfaceLuid,NET_IFINDEX InterfaceIndex,const SOCKADDR_INET* SourceAddress,const SOCKADDR_INET* DestinationAddress,ULONG AddressSortOptions,PMIB_IPFORWARD_ROW2 BestRoute,SOCKADDR_INET* BestSourceAddress)
+{
+    Log("GetBestRoute2");
+    return GetBestRoute2(InterfaceLuid, InterfaceIndex, SourceAddress, DestinationAddress, AddressSortOptions, BestRoute, BestSourceAddress);
+}
+
+DWORD WINAPI MyGetIfStackTable(PMIB_IFSTACK_TABLE* Table)
+{
+    Log("GetIfStackTable");
+    return GetIfStackTable(Table);
+}
+
+DWORD WINAPI MyGetIpForwardTable(PMIB_IPFORWARDTABLE pIpForwardTable,PULONG pdwSize,BOOL bOrder)
+{
+    Log("GetIpForwardTable");
+    return GetIpForwardTable(pIpForwardTable, pdwSize, bOrder);
+}
+
+DWORD WINAPI MyGetIpForwardTable2(ADDRESS_FAMILY Family,PMIB_IPFORWARD_TABLE2* Table)
+{
+    Log("GetIpForwardTable2");
+    return GetIpForwardTable2(Family, Table);
+}
+
+DWORD WINAPI MyGetIpInterfaceTable(ADDRESS_FAMILY Family, PMIB_IPINTERFACE_TABLE* Table)
+{
+    Log("GetIpInterfaceTable");
+    return GetIpInterfaceTable(Family, Table);
+}
+
+DWORD WINAPI MyGetIpPathTable(ADDRESS_FAMILY Family, PMIB_IPPATH_TABLE* Table)
+{
+    Log("GetIpPathTable");
+    return GetIpPathTable(Family, Table);
+}
+
+ULONG MyGetIpStatistics(PMIB_IPSTATS Statistics)
+{
+    Log("GetIpStatistics");
+    return GetIpStatistics(Statistics);
+}
+
+ULONG MyGetIpStatisticsEx(PMIB_IPSTATS Statistics, ULONG Family)
+{
+    Log("GetIpStatisticsEx");
+    return GetIpStatisticsEx(Statistics, Family);
+}
+
+DWORD WINAPI MyGetMulticastIpAddressTable(ADDRESS_FAMILY Family, PMIB_MULTICASTIPADDRESS_TABLE* Table)
+{
+    Log("GetMulticastIpAddressTable");
+    return GetMulticastIpAddressTable(Family, Table);
+}
+
+DWORD WINAPI MyGetNetworkParams(PFIXED_INFO pFixedInfo,PULONG pOutBufLen)
+{
+    Log("GetNetworkParams");
+    return GetNetworkParams(pFixedInfo, pOutBufLen);
+}
+
+DWORD WINAPI MyGetOwnerModuleFromTcpEntry(PMIB_TCPROW_OWNER_MODULE pTcpEntry, TCPIP_OWNER_MODULE_INFO_CLASS Class, PVOID pBuffer, PDWORD pdwSize)
+{
+    Log("GetOwnerModuleFromTcpEntry");
+    return GetOwnerModuleFromTcpEntry(pTcpEntry, Class, pBuffer, pdwSize);
+}
+
+DWORD WINAPI MyGetOwnerModuleFromUdpEntry(PMIB_UDPROW_OWNER_MODULE pUdpEntry, TCPIP_OWNER_MODULE_INFO_CLASS Class, PVOID pBuffer, PDWORD pdwSize)
+{
+    Log("GetOwnerModuleFromUdpEntry");
+    return GetOwnerModuleFromUdpEntry(pUdpEntry, Class, pBuffer, pdwSize);
+}
+
+ULONG MyGetTcpTable(PMIB_TCPTABLE TcpTable, PULONG SizePointer, BOOL Order)
+{
+    Log("GetTcpTable");
+    return GetTcpTable(TcpTable, SizePointer, Order);
+}
+
+ULONG MyGetTcpTable2(PMIB_TCPTABLE2 TcpTable, PULONG SizePointer, BOOL Order)
+{
+    Log("GetTcpTable2");
+    return GetTcpTable2(TcpTable, SizePointer, Order);
+}
+
+HANDLE MyCreateMutexA(LPSECURITY_ATTRIBUTES lpMutexAttributes,BOOL bInitialOwner,LPCSTR lpName)
+{
+    Log("CreateMutexA");
+    return CreateMutexA(lpMutexAttributes, bInitialOwner, lpName);
+}
+
+HANDLE MyCreateMutexExA(LPSECURITY_ATTRIBUTES lpMutexAttributes, LPCSTR lpName, DWORD dwFlags, DWORD dwDesiredAccess)
+{
+    Log("CreateMutexExA");
+    return CreateMutexExA(lpMutexAttributes, lpName, dwFlags, dwDesiredAccess);
+}
+
+HANDLE MyCreateMutexExW(LPSECURITY_ATTRIBUTES lpMutexAttributes, LPCWSTR lpName, DWORD dwFlags, DWORD dwDesiredAccess)
+{
+    Log("CreateMutexExW");
+    return CreateMutexExW(lpMutexAttributes, lpName, dwFlags, dwDesiredAccess);
+}
+
+HANDLE MyCreateMutexW(LPSECURITY_ATTRIBUTES lpMutexAttributes,BOOL bInitialOwner,LPCWSTR lpName)
+{
+    Log("CreateMutexW");
+    return CreateMutexW(lpMutexAttributes, bInitialOwner, lpName);
+}
+
+//BOOL WINAPI MyDeviceIoControl(HANDLE hDevice, DWORD dwIoControlCode, LPVOID lpInBuffer, DWORD nInBufferSize, LPVOID lpOutBuffer, DWORD nOutBufferSize, LPDWORD lpBytesReturned, LPOVERLAPPED lpOverlapped)
+//{
+//    UNICODE_STRING objectName;
+//    ULONG returnLength;
+//    NTSTATUS status = NtQueryObject(
+//        hDevice,
+//        ObjectBasicInformation,
+//        &objectName,
+//        sizeof(objectName),
+//        &returnLength
+//    );
+//
+//    if (NT_SUCCESS(status)) {
+//        // Log the objectName here
+//        std::stringstream logMessage;
+//        logMessage << "Device name: %wZ" << objectName.Buffer << std::endl;
+//        Log(logMessage.str());
+//    }
+//
+//    return DeviceIoControl(hDevice, dwIoControlCode, lpInBuffer, nInBufferSize, lpOutBuffer, nOutBufferSize, lpBytesReturned, lpOverlapped);
+//}
+
+HANDLE WINAPI MyCreateFileA(LPCSTR lpFileName, DWORD dwDesiredAccess, DWORD dwShareMode, LPSECURITY_ATTRIBUTES lpSecurityAttributes, DWORD dwCreationDisposition, DWORD dwFlagsAndAttributes, HANDLE hTemplateFile)
+{
+    Log("CreateFileA");
+    Log(lpFileName);
+    return CreateFileA(lpFileName, dwDesiredAccess, dwShareMode, lpSecurityAttributes, dwCreationDisposition, dwFlagsAndAttributes, hTemplateFile);
+}
+
+HANDLE WINAPI MyCreateFileW(LPCWSTR lpFileName, DWORD dwDesiredAccess, DWORD dwShareMode, LPSECURITY_ATTRIBUTES lpSecurityAttributes, DWORD dwCreationDisposition, DWORD dwFlagsAndAttributes, HANDLE hTemplateFile)
+{
+    Log("CreateFileW");
+    LogW(lpFileName);
+    return CreateFileW(lpFileName, dwDesiredAccess, dwShareMode, lpSecurityAttributes, dwCreationDisposition, dwFlagsAndAttributes, hTemplateFile);
+}
+
+
+std::string GenerateRandomString(size_t length) {
+    const std::string characters = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
+    std::string randomString;
+
+    for (size_t i = 0; i < length; ++i) {
+        randomString += characters[rand() % characters.length()];
+    }
+
+    return randomString;
+}
+
 HOOKTEST_API void __stdcall NativeInjectionEntryPoint(REMOTE_ENTRY_INFO * remoteInfo)
 {
     ZeroMemory(tempString, sizeof(tempString));
     ZeroMemory(tempStringW, sizeof(tempStringW));
 
     // See if there is a log file which indicates we should log our progress.
-    hLogFile = CreateFile("jailbreak.log", GENERIC_WRITE, FILE_SHARE_WRITE | FILE_SHARE_READ,
+    hLogFile = CreateFile("injector.log", GENERIC_WRITE, FILE_SHARE_WRITE | FILE_SHARE_READ,
         NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
 
     if (hLogFile != INVALID_HANDLE_VALUE)
@@ -2860,6 +3265,41 @@ HOOKTEST_API void __stdcall NativeInjectionEntryPoint(REMOTE_ENTRY_INFO * remote
     }
 
 
+    // Initialize random seed
+    srand(static_cast<unsigned int>(time(nullptr)));
+
+    // Generate random values
+    std::string newComputerName = GenerateRandomString(10); // Example length 10
+    std::string newUserName = GenerateRandomString(8); // Example length 8
+
+    // Set environment variables
+    if (!SetEnvironmentVariable("COMPUTERNAME", newComputerName.c_str())) {
+        // Handle error
+        DWORD dwError = GetLastError();
+    }
+
+    if (!SetEnvironmentVariable("USERNAME", newUserName.c_str())) {
+        // Handle error
+        DWORD dwError = GetLastError();
+    }
+
+    // Rest of your code
+
+
+    ////InstallHook("user32", "GetForegroundWindow", GetForegroundWindow_Hook);
+    ////InstallHook("user32", "WindowFromPoint", WindowFromPoint_Hook);
+    ////InstallHook("user32", "GetActiveWindow", GetActiveWindow_Hook);
+    //InstallHook("user32", "IsWindowEnabled", IsWindowEnabled_Hook);
+    ////InstallHook("user32", "GetFocus", GetFocus_Hook);
+    ////InstallHook("user32", "GetCapture", GetCapture_Hook);
+    //InstallHook("user32", "SetCapture", SetCapture_Hook);
+    //InstallHook("user32", "ReleaseCapture", ReleaseCapture_Hook);
+    //InstallHook("user32", "SetActiveWindow", SetActiveWindow_Hook);
+    //InstallHook("user32", "SetFocus", SetFocus_Hook);
+    //
+    //InstallHook("user32", "SetForegroundWindow", SetForegroundWindow_Hook);
+
+
     targetIPAddress = getenv("TargetIPAddress");
     if (targetIPAddress != nullptr) {
         Log("TargetIPAddress: ");
@@ -2868,18 +3308,18 @@ HOOKTEST_API void __stdcall NativeInjectionEntryPoint(REMOTE_ENTRY_INFO * remote
     else {
         Log("TargetIPAddress not found");
     }
-
-
-    // Initialize random seed
-    srand(static_cast<unsigned int>(time(NULL)));
-
-    GenerateRandomMACAddress(macAddress);
-
-
-    /*strcpy(targetHostname, "DESKTOP-AAAAAAA");
-    RandomAlphanumeric(targetHostname + 8, 7 + 1);*/
-
-    Log("Rando");
+    //
+    //
+    //// Initialize random seed
+    //srand(static_cast<unsigned int>(time(NULL)));
+    //
+    //GenerateRandomMACAddress(macAddress);
+    //
+    //
+    ///*strcpy(targetHostname, "DESKTOP-AAAAAAA");
+    //RandomAlphanumeric(targetHostname + 8, 7 + 1);*/
+    //
+    //Log("Rando");
 
 
     //targetIPAddress = "192.168.0.10";
@@ -2889,48 +3329,76 @@ HOOKTEST_API void __stdcall NativeInjectionEntryPoint(REMOTE_ENTRY_INFO * remote
     //targetHostname = "DESKTOP-BBBBBBB";
 
     //InstallHook("ole32.dll", "CoInitializeEx", MyCoInitializeEx);
-    /*InstallHook("ole32.dll", "CoCreateInstance", MyCoCreateInstance);
-    InstallHook("ole32.dll", "CoCreateInstanceEx", MyCoCreateInstanceEx);*/
+    //InstallHook("ole32.dll", "CoCreateInstance", MyCoCreateInstance);
+    //InstallHook("ole32.dll", "CoCreateInstanceEx", MyCoCreateInstanceEx);
 
     //InstallHook("kernel32", "LoadLibraryA", HookedLoadLibraryA);
+
     //InstallHook("Iphlpapi", "GetIpNetEntry2", Hooked_GetIpNetEntry2);
-    //InstallHook("Iphlpapi", "GetIpNetTable2", Hooked_GetIpNetTable2);
     //InstallHook("Iphlpapi", "GetIfEntry2", Hooked_GetIfEntry2);
     //InstallHook("Iphlpapi", "GetIfEntry2Ex", Hooked_GetIfEntry2Ex);
     //InstallHook("Iphlpapi", "GetIfTable2", Hooked_GetIfTable2);
     //InstallHook("Iphlpapi", "GetIfTable2Ex", Hooked_GetIfTable2Ex);
-    InstallHook("Iphlpapi", "GetAdaptersInfo", MyGetAdaptersInfo); //
+    //InstallHook("Iphlpapi", "GetAdaptersInfo", MyGetAdaptersInfo); //
     //InstallHook("Iphlpapi", "GetUnicastIpAddressTable", MyGetUnicastIpAddressTable); //
     //InstallHook("Iphlpapi", "GetAdaptersAddresses", HookedGetAdaptersAddresses);
     //InstallHook("Iphlpapi", "GetIfTable", HookedGetIfTable);
     //InstallHook("Iphlpapi", "GetIfEntry", HookedGetIfEntry);
-    //InstallHook("Iphlpapi", "GetIpNetTable", HookedGetIpNetTable);
-    //
-    //InstallHook("ws2_32.dll", "WSAStartup", MyWSAStartup);
-    //InstallHook("ws2_32.dll", "socket", MySocket);
+    //InstallHook("Iphlpapi", "CreatePersistentUdpPortReservation", MyCreatePersistentUdpPortReservation);
+    //InstallHook("Iphlpapi", "CreateProxyArpEntry", MyCreateProxyArpEntry);
+    //InstallHook("Iphlpapi", "GetBestInterface", MyGetBestInterface);
+    //InstallHook("Iphlpapi", "GetBestInterfaceEx", MyGetBestInterfaceEx);
+    //InstallHook("Iphlpapi", "GetExtendedUdpTable", MyGetExtendedUdpTable);
+    //InstallHook("Iphlpapi", "GetInterfaceInfo", MyGetInterfaceInfo);
+    //InstallHook("Iphlpapi", "GetIpAddrTable", MyGetIpAddrTable);
+    //InstallHook("Iphlpapi", "GetIpNetTable", MyGetIpNetTable);
+    //InstallHook("Iphlpapi", "GetIpNetTable2", MyGetIpNetTable2);
+    //InstallHook("Iphlpapi", "GetOwnerModuleFromUdpEntry", MyGetOwnerModuleFromUdpEntry);
+    //InstallHook("Iphlpapi", "GetPerAdapterInfo", MyGetPerAdapterInfo);
+    //InstallHook("Iphlpapi", "GetUdpTable", MyGetUdpTable);
+    //InstallHook("Iphlpapi", "GetAnycastIpAddressTable", MyGetAnycastIpAddressTable);
+    //InstallHook("Iphlpapi", "GetBestRoute", MyGetBestRoute);
+    //InstallHook("Iphlpapi", "GetBestRoute2", MyGetBestRoute2);
+    //InstallHook("Iphlpapi", "GetIfStackTable", MyGetIfStackTable);
+    //InstallHook("Iphlpapi", "GetIpForwardTable", MyGetIpForwardTable);
+    //InstallHook("Iphlpapi", "GetIpForwardTable2", MyGetIpForwardTable2);
+    //InstallHook("Iphlpapi", "GetIpInterfaceTable", MyGetIpInterfaceTable);
+    //InstallHook("Iphlpapi", "GetIpPathTable", MyGetIpPathTable);
+    //InstallHook("Iphlpapi", "GetIpStatistics", MyGetIpStatistics);
+    //InstallHook("Iphlpapi", "GetIpStatisticsEx", MyGetIpStatisticsEx);
+    //InstallHook("Iphlpapi", "GetMulticastIpAddressTable", MyGetMulticastIpAddressTable);
+    //InstallHook("Iphlpapi", "GetNetworkParams", MyGetNetworkParams);
+    //InstallHook("Iphlpapi", "GetOwnerModuleFromTcpEntry", MyGetOwnerModuleFromTcpEntry);
+    //InstallHook("Iphlpapi", "GetOwnerModuleFromUdpEntry", MyGetOwnerModuleFromUdpEntry);
+    //InstallHook("Iphlpapi", "GetTcpTable", MyGetTcpTable);
+    //InstallHook("Iphlpapi", "GetTcpTable2", MyGetTcpTable2);
+
+    ////
+    ////InstallHook("ws2_32.dll", "WSAStartup", MyWSAStartup);
+    ////InstallHook("ws2_32.dll", "socket", MySocket);
     InstallHook("ws2_32.dll", "bind", MyBind); //
-    ////InstallHook("ws2_32.dll", "getsockname", MyGetSockName);
-    InstallHook("ws2_32.dll", "sendto", MySendTo); //
+    InstallHook("ws2_32.dll", "getsockname", MyGetSockName);
+    //InstallHook("ws2_32.dll", "sendto", MySendTo); //
     //InstallHook("ws2_32.dll", "recvfrom", MyRecvFrom); //
     //InstallHook("ws2_32.dll", "closesocket", MyCloseSocket);
     //InstallHook("ws2_32.dll", "WSACleanup", MyWSACleanup);
     //
-    //InstallHook("ws2_32.dll", "gethostname", MyGetHostName); //
-    ////InstallHook("ws2_32.dll", "gethostbyname", MyGetHostByName); //
+    InstallHook("ws2_32.dll", "gethostname", MyGetHostName); //
+    InstallHook("ws2_32.dll", "gethostbyname", MyGetHostByName); //
     ////////InstallHook("ws2_32.dll", "gethostbyaddr", MyGetHostByAddr);
     ////InstallHook("ws2_32.dll", "getnameinfo", MyGetNameInfo);
     /////////*InstallHook("ws2_32.dll", "GetNameInfo", MyGetNameInfo2);
     ////////InstallHook("ws2_32.dll", "GetNameInfoA", MyGetNameInfoA);*/
     ////InstallHook("ws2_32.dll", "GetNameInfoW", MyGetNameInfoW);
-    ////////InstallHook("ws2_32.dll", "WSAEnumNetworkEvents", MyWSAEnumNetworkEvents);
+    InstallHook("ws2_32.dll", "WSAEnumNetworkEvents", MyWSAEnumNetworkEvents);
     ////////InstallHook("ws2_32.dll", "WSAConnect", MyWSAConnect);
     ////////InstallHook("ws2_32.dll", "WSAConnectByList", MyWSAConnectByList);
     ////////InstallHook("ws2_32.dll", "WSAConnectByNameA", MyWSAConnectByNameA);
     ////////InstallHook("ws2_32.dll", "WSAConnectByNameW", MyWSAConnectByNameW);
-    ////////InstallHook("ws2_32.dll", "WSAAsyncGetHostByAddr", MyWSAAsyncGetHostByAddr);
-    ////////InstallHook("ws2_32.dll", "WSAAsyncGetHostByName", MyWSAAsyncGetHostByName);
+    //InstallHook("ws2_32.dll", "WSAAsyncGetHostByAddr", MyWSAAsyncGetHostByAddr);
+    //InstallHook("ws2_32.dll", "WSAAsyncGetHostByName", MyWSAAsyncGetHostByName);
     ////////InstallHook("ws2_32.dll", "WSARecv", MyWSARecv);
-    ////////InstallHook("ws2_32.dll", "WSARecvFrom", MyWSARecvFrom);
+    //InstallHook("ws2_32.dll", "WSARecvFrom", MyWSARecvFrom);
     ////////InstallHook("ws2_32.dll", "WSASend", MyWSASend);
     ////////InstallHook("ws2_32.dll", "WSASendTo", MyWSASendTo);
     ////////InstallHook("ws2_32.dll", "WSASocketA", MyWSASocketA);
@@ -2941,32 +3409,21 @@ HOOKTEST_API void __stdcall NativeInjectionEntryPoint(REMOTE_ENTRY_INFO * remote
     //InstallHook("ws2_32.dll", "GetAddrInfoExW", MyGetAddrInfoExW);                        //
     //InstallHook("ws2_32.dll", "getnameinfo", MyGetNameInfo);                          //
     //InstallHook("ws2_32.dll", "GetNameInfoW", MyGetNameInfoW);                        //
-    ////InstallHook("ws2_32.dll", "WSALookupServiceNextA", MyWSALookupServiceNextA);      //
-    ////InstallHook("ws2_32.dll", "WSALookupServiceNextW", MyWSALookupServiceNextW);      //
+    //InstallHook("ws2_32.dll", "WSALookupServiceNextA", MyWSALookupServiceNextA);      //
+    //InstallHook("ws2_32.dll", "WSALookupServiceNextW", MyWSALookupServiceNextW);      //
     ////InstallHook("ws2_32.dll", "WSALookupServiceBeginA", MyWSALookupServiceBeginA);
     ////InstallHook("ws2_32.dll", "WSALookupServiceBeginW", MyWSALookupServiceBeginW);
     //////
     ///////*InstallHook("ws2_32.dll", "__WSAFDIsSet", MyWSAFDIsSet);
     //////InstallHook("ws2_32.dll", "htons", MyHtons);*/
     //////
-    ////////InstallHook("Iphlpapi", "CreatePersistentUdpPortReservation", MyCreatePersistentUdpPortReservation);
-    ////////InstallHook("Iphlpapi", "CreateProxyArpEntry", MyCreateProxyArpEntry);
-    ////////InstallHook("Iphlpapi", "GetBestInterface", MyGetBestInterface);
-    ////////InstallHook("Iphlpapi", "GetBestInterfaceEx", MyGetBestInterfaceEx);
-    ////////InstallHook("Iphlpapi", "GetExtendedUdpTable", MyGetExtendedUdpTable);
-    ////////InstallHook("Iphlpapi", "GetInterfaceInfo", MyGetInterfaceInfo);
-    ////////InstallHook("Iphlpapi", "GetIpAddrTable", MyGetIpAddrTable);
-    ////////InstallHook("Iphlpapi", "GetIpNetTable", MyGetIpNetTable);
-    ////////InstallHook("Iphlpapi", "GetIpNetTable2", MyGetIpNetTable2);
-    ////////InstallHook("Iphlpapi", "GetOwnerModuleFromUdpEntry", MyGetOwnerModuleFromUdpEntry);
-    ////////InstallHook("Iphlpapi", "GetPerAdapterInfo", MyGetPerAdapterInfo);
-    //////////InstallHook("Iphlpapi", "GetUdpTable", MyGetUdpTable);
     ////////
-    ////////InstallHook("dnsapi.dll", "DnsQuery_A", MyDnsQuery_A);
-    ////////InstallHook("dnsapi.dll", "DnsQuery_UTF8", MyDnsQuery_UTF8);
-    ////////InstallHook("dnsapi.dll", "DnsQuery_W", MyDnsQuery_W);
+    //InstallHook("dnsapi.dll", "DnsQuery_A", MyDnsQuery_A);
+    //InstallHook("dnsapi.dll", "DnsQuery_UTF8", MyDnsQuery_UTF8);
+    //InstallHook("dnsapi.dll", "DnsQuery_W", MyDnsQuery_W);
     //InstallHook("dnsapi.dll", "DnsQueryEx", MyDnsQueryEx); //
     
+    //InstallHook("kernel32.dll", "DeviceIoControl", MyDeviceIoControl);
     
     //InstallHook("kernel32.dll", "GetEnvironmentVariableA", MyGetEnvironmentVariableA);
     //InstallHook("kernel32.dll", "GetEnvironmentStringsW", MyGetEnvironmentStringsW);
@@ -2978,13 +3435,22 @@ HOOKTEST_API void __stdcall NativeInjectionEntryPoint(REMOTE_ENTRY_INFO * remote
     //InstallHook("kernel32.dll", "GetComputerNameExW", MyGetComputerNameExW);
     //InstallHook("kernel32.dll", "DnsHostnameToComputerNameA", MyDnsHostnameToComputerNameA);
     //InstallHook("kernel32.dll", "DnsHostnameToComputerNameW", MyDnsHostnameToComputerNameW);
+
+    //InstallHook("kernel32.dll", "CreateMutexA", MyCreateMutexA);
+    //InstallHook("kernel32.dll", "CreateMutexExA", MyCreateMutexExA);
+    //InstallHook("kernel32.dll", "CreateMutexW", MyCreateMutexW);
+    //InstallHook("kernel32.dll", "CreateMutexExW", MyCreateMutexExW);
+
+    //InstallHook("kernel32.dll", "CreateFileA", MyCreateFileA);
+    //InstallHook("kernel32.dll", "CreateFileW", MyCreateFileW);
+    
     //
     ////InstallHook("advapi32.dll", "SetEntriesInAclW", MySetEntriesInAclW);
     ////InstallHook("advapi32.dll", "GetTokenInformation", MyGetTokenInformation);
-    ////InstallHook("advapi32.dll", "RegOpenKeyA", MyRegOpenKeyA);
-    ////InstallHook("advapi32.dll", "RegOpenKeyExA", MyRegOpenKeyExA);
-    ////InstallHook("advapi32.dll", "RegOpenKeyW", MyRegOpenKeyW);
-    ////InstallHook("advapi32.dll", "RegOpenKeyExW", MyRegOpenKeyExW);
+    //InstallHook("advapi32.dll", "RegOpenKeyA", MyRegOpenKeyA);
+    //InstallHook("advapi32.dll", "RegOpenKeyExA", MyRegOpenKeyExA);
+    //InstallHook("advapi32.dll", "RegOpenKeyW", MyRegOpenKeyW);
+    //InstallHook("advapi32.dll", "RegOpenKeyExW", MyRegOpenKeyExW);
     ////InstallHook("advapi32.dll", "RegCloseKey", MyRegCloseKey);
     //InstallHook("advapi32.dll", "RegQueryValueW", MyRegQueryValueW);
     //InstallHook("advapi32.dll", "RegQueryValueA", MyRegQueryValueA);

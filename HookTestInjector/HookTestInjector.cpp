@@ -141,6 +141,7 @@ int _tmain(int argc, _TCHAR* argv[])
 
     bResult = CreateProcess(NULL,
         pCommandLine, NULL, NULL, FALSE, CREATE_SUSPENDED, 
+        //NULL, NULL, &si, &pi);
         newEnv.data(), NULL, &si, &pi);
 
     if (!bResult)

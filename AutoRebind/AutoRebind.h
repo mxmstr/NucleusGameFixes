@@ -9,7 +9,7 @@
 #ifdef JAILBREAKHOOK_EXPORTS
 #define AUTOREBIND_API __declspec(dllexport)
 #else
-#define R6FIX_API __declspec(dllimport)
+#define AUTOREBIND_API __declspec(dllimport)
 #endif
 
 extern "C" AUTOREBIND_API void __stdcall NativeInjectionEntryPoint(REMOTE_ENTRY_INFO * remoteInfo);
