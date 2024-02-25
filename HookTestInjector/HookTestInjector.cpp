@@ -157,8 +157,6 @@ int _tmain(int argc, _TCHAR* argv[])
         WriteFile(hLogFile, tempString, (DWORD)(_tcslen(tempString)*sizeof(TCHAR)), &dwWritten, NULL);
     }
 
-    //Sleep(10000);
-
     nt = RhInjectLibrary(pi.dwProcessId, 0, EASYHOOK_INJECT_DEFAULT,
         L"HookTest32.dll",
         L"HookTest64.dll", NULL, 0);
@@ -169,6 +167,8 @@ int _tmain(int argc, _TCHAR* argv[])
         ret = -1;
     }
     printf("\n");
+
+    //Sleep(10000);
 
     ResumeThread(pi.hThread);
 

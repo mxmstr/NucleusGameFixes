@@ -1,4 +1,4 @@
-// jailbreakhook.cpp : Defines the exported functions for the DLL application.
+ // jailbreakhook.cpp : Defines the exported functions for the DLL application.
 //
 #include "stdafx.h"
 #include <sstream>
@@ -23,17 +23,22 @@
 #include <combaseapi.h>
 #include <wbemcli.h>
 #include <map>
+#include <setupapi.h>
+//#include <cstdio>
 //#include <ntdef.h>
 //#include <winternl.h>
 using namespace std;
 
+SOCKET broadcastSocket = INVALID_SOCKET;
 unsigned char macAddress[6];
 char* targetIPAddress = "";
 char* hostIPAddress = "";
+std::string randomIPAddress = "";
 USHORT hostPort = 12345;
 char targetHostname[18];
 char originalHostname[18];
 bool joined = false;
+unsigned char idBytes[1] = { 0 };
 
 HANDLE hLogFile = INVALID_HANDLE_VALUE;
 TCHAR tempString[2048];
@@ -330,102 +335,100 @@ DWORD WINAPI Hooked_GetIfTable2Ex(MIB_IF_TABLE_LEVEL Family, PMIB_IF_TABLE2* Tab
     return GetIfTable2Ex(Family, Table);
 }
 
-int WINAPI MyWSAStartup(WORD wVersionRequested, LPWSADATA lpWSAData)
-{
-    Log("MyWSAStartup");
-
-    return WSAStartup(wVersionRequested, lpWSAData);
-}
-
 SOCKET WINAPI MySocket(int af, int type, int protocol)
 {
     Log("MySocket");
+    std::stringstream logMessage;
+    logMessage << "af: " << af << std::endl;
+    logMessage << "type: " << type << std::endl;
+    logMessage << "protocol: " << protocol << std::endl;
+    Log(logMessage.str());
     return socket(af, type, protocol);;
 }
 
-int WINAPI MyBind(SOCKET s, const struct sockaddr* name, int namelen)
-{
-    Log("MyBind");
-
-    // Ensure the address is IPv4 (AF_INET)
-    if (name->sa_family == AF_INET)
-    {
-        sockaddr_in* sockaddrIPv4 = (sockaddr_in*)name;
-        char ipBuffer[INET_ADDRSTRLEN];
-        inet_ntop(AF_INET, &(sockaddrIPv4->sin_addr), ipBuffer, INET_ADDRSTRLEN);
-        USHORT port = ntohs(sockaddrIPv4->sin_port);
-
-        std::stringstream logMessage;
-        logMessage << "Bound IP Address: " << ipBuffer << std::endl;
-        logMessage << "Bound Port: " << port << std::endl;
-        Log(logMessage.str());
-
-
-        struct sockaddr_in modified_addr = {};
-        memcpy(&modified_addr, name, sizeof(modified_addr));
-
-        // Set IP to 0.0.0.0
-        //modified_addr.sin_addr.s_addr = htonl(INADDR_ANY);
-        modified_addr.sin_addr.s_addr = inet_addr(targetIPAddress);
-
-        // Check the original port
-        USHORT originalPort = ntohs(modified_addr.sin_port);
-        // Find the first available port starting from originalPort
-        for (USHORT port = originalPort; port < 65535; ++port)
-        {
-            modified_addr.sin_port = htons(port);
-            if (bind(s, (struct sockaddr*)&modified_addr, sizeof(modified_addr)) == 0)
-            {
-                // Successfully bound
-                return 0;
-            }
-        }
-
-        // If no ports are available, return error
-        return SOCKET_ERROR;
-    }
-
-    // For other cases, proceed as normal
-    return bind(s, name, namelen);
-
-    // Extract IP address and port from the sockaddr structure
-    //if (name->sa_family == AF_INET)
-    //{
-    //    sockaddr_in* sockaddrIPv4 = (sockaddr_in*)name;
-    //    char ipBuffer[INET_ADDRSTRLEN];
-    //    inet_ntop(AF_INET, &(sockaddrIPv4->sin_addr), ipBuffer, INET_ADDRSTRLEN);
-    //    USHORT port = ntohs(sockaddrIPv4->sin_port);
-
-    //    std::stringstream logMessage;
-    //    logMessage << "Bound IP Address: " << ipBuffer << std::endl;
-    //    logMessage << "Bound Port: " << port << std::endl;
-    //    Log(logMessage.str());
-    //    
-    //    if (inet_pton(AF_INET, targetIPAddress, &(sockaddrIPv4->sin_addr)) != 1)
-    //    {
-    //        Log("Failed to convert IP address");
-    //        return SOCKET_ERROR;
-    //    }
-    //}
-    //else if (name->sa_family == AF_INET6)
-    //{
-    //    sockaddr_in6* sockaddrIPv6 = (sockaddr_in6*)name;
-    //    char ipBuffer[INET6_ADDRSTRLEN];
-    //    inet_ntop(AF_INET6, &(sockaddrIPv6->sin6_addr), ipBuffer, INET6_ADDRSTRLEN);
-    //    USHORT port = ntohs(sockaddrIPv6->sin6_port);
-
-    //    std::stringstream logMessage;
-    //    logMessage << "Bound IP Address: " << ipBuffer << std::endl;
-    //    logMessage << "Bound Port: " << port << std::endl;
-    //    Log(logMessage.str());
-    //}
-    //else
-    //{
-    //    // Handle other address families if needed
-    //}
-
-    //return bind(s, name, namelen);
-}
+//int WINAPI MyBind(SOCKET s, const struct sockaddr* name, int namelen)
+//{
+//    Log("MyBind");
+//
+//    // Ensure the address is IPv4 (AF_INET)
+//    if (name->sa_family == AF_INET)
+//    {
+//        sockaddr_in* sockaddrIPv4 = (sockaddr_in*)name;
+//        char ipBuffer[INET_ADDRSTRLEN];
+//        inet_ntop(AF_INET, &(sockaddrIPv4->sin_addr), ipBuffer, INET_ADDRSTRLEN);
+//        USHORT port = ntohs(sockaddrIPv4->sin_port);
+//
+//        std::stringstream logMessage;
+//        logMessage << "Bound IP Address: " << ipBuffer << std::endl;
+//        logMessage << "Bound Port: " << port << std::endl;
+//        Log(logMessage.str());
+//
+//
+//        struct sockaddr_in modified_addr = {};
+//        memcpy(&modified_addr, name, sizeof(modified_addr));
+//
+//        // Set IP to 0.0.0.0
+//        modified_addr.sin_addr.s_addr = htonl(INADDR_ANY);
+//        //modified_addr.sin_addr.s_addr = inet_addr(targetIPAddress);
+//
+//        // Check the original port
+//        USHORT originalPort = ntohs(modified_addr.sin_port);
+//        // Find the first available port starting from originalPort
+//        for (USHORT port = originalPort; port < 65535; ++port)
+//        {
+//            modified_addr.sin_port = htons(port);
+//            if (bind(s, (struct sockaddr*)&modified_addr, sizeof(modified_addr)) == 0)
+//            {
+//                // Successfully bound
+//                return 0;
+//            }
+//        }
+//
+//        // If no ports are available, return error
+//        return SOCKET_ERROR;
+//    }
+//
+//    // For other cases, proceed as normal
+//    return bind(s, name, namelen);
+//
+//    // Extract IP address and port from the sockaddr structure
+//    //if (name->sa_family == AF_INET)
+//    //{
+//    //    sockaddr_in* sockaddrIPv4 = (sockaddr_in*)name;
+//    //    char ipBuffer[INET_ADDRSTRLEN];
+//    //    inet_ntop(AF_INET, &(sockaddrIPv4->sin_addr), ipBuffer, INET_ADDRSTRLEN);
+//    //    USHORT port = ntohs(sockaddrIPv4->sin_port);
+//
+//    //    std::stringstream logMessage;
+//    //    logMessage << "Bound IP Address: " << ipBuffer << std::endl;
+//    //    logMessage << "Bound Port: " << port << std::endl;
+//    //    Log(logMessage.str());
+//    //    
+//    //    if (inet_pton(AF_INET, targetIPAddress, &(sockaddrIPv4->sin_addr)) != 1)
+//    //    {
+//    //        Log("Failed to convert IP address");
+//    //        return SOCKET_ERROR;
+//    //    }
+//    //}
+//    //else if (name->sa_family == AF_INET6)
+//    //{
+//    //    sockaddr_in6* sockaddrIPv6 = (sockaddr_in6*)name;
+//    //    char ipBuffer[INET6_ADDRSTRLEN];
+//    //    inet_ntop(AF_INET6, &(sockaddrIPv6->sin6_addr), ipBuffer, INET6_ADDRSTRLEN);
+//    //    USHORT port = ntohs(sockaddrIPv6->sin6_port);
+//
+//    //    std::stringstream logMessage;
+//    //    logMessage << "Bound IP Address: " << ipBuffer << std::endl;
+//    //    logMessage << "Bound Port: " << port << std::endl;
+//    //    Log(logMessage.str());
+//    //}
+//    //else
+//    //{
+//    //    // Handle other address families if needed
+//    //}
+//
+//    //return bind(s, name, namelen);
+//}
 
 int WINAPI MyGetSockName(SOCKET s, struct sockaddr* name, int* namelen)
 {
@@ -437,10 +440,10 @@ int WINAPI MyGetSockName(SOCKET s, struct sockaddr* name, int* namelen)
     logMessage << "getsockname intercepted!" << std::endl;
     logMessage << "Socket: " << s << std::endl;
 
-    /*const sockaddr_in* addr = reinterpret_cast<const sockaddr_in*>(name);
+    const sockaddr_in* addr = reinterpret_cast<const sockaddr_in*>(name);
     char destAddrString[INET_ADDRSTRLEN];
 
-    if (inet_ntop(AF_INET, addr, destAddrString, INET_ADDRSTRLEN) != nullptr)
+    /*if (inet_ntop(AF_INET, addr, destAddrString, INET_ADDRSTRLEN) != nullptr)
     {
         logMessage << "Address: " << destAddrString << std::endl;
     }
@@ -452,24 +455,24 @@ int WINAPI MyGetSockName(SOCKET s, struct sockaddr* name, int* namelen)
     //
     //
 
-    std::string baseIP = "192.168.0.";
+    //std::string baseIP = "192.168.0.";
 
-    // Initialize random seed
-    std::srand(std::time(0));
+    //// Initialize random seed
+    //std::srand(std::time(0));
 
-    // Generate a random number from 0 to 999
-    int lastDigits = std::rand() % 1000;
+    //// Generate a random number from 0 to 999
+    //int lastDigits = std::rand() % 1000;
 
-    // Combine the base IP with the random last digits
-    std::string randomizedIP = baseIP + std::to_string(lastDigits);
+    //// Combine the base IP with the random last digits
+    //std::string randomizedIP = baseIP + std::to_string(lastDigits);
 
-    std::cout << "Randomized IP Address: " << randomizedIP << std::endl;
+    //std::cout << "Randomized IP Address: " << randomizedIP << std::endl;
 
 
-    if (inet_pton(AF_INET, randomizedIP.c_str(), &(((struct sockaddr_in*)name)->sin_addr)) <= 0) {
+    if (inet_pton(AF_INET, randomIPAddress.c_str(), &(((struct sockaddr_in*)name)->sin_addr)) <= 0) {
         logMessage << "error" << result << std::endl;
     }
-    //
+    
     //// Log information about the result and parameters
     //logMessage << "Result: " << result << std::endl;
     //
@@ -524,252 +527,255 @@ void printRawBytes(const char* data, std::size_t size) {
 //    return result;
 //}
 
-int WINAPI MySendTo(SOCKET s, const char* buf, int len, int flags, const struct sockaddr* to, int tolen)
-{
-    // Log information about the sendto call
-    std::stringstream logMessage;
-    logMessage << "sendto intercepted!" << std::endl;
-    logMessage << "Socket: " << s << std::endl;
-    logMessage << "Length: " << len << std::endl;
-    logMessage << "Flags: " << flags << std::endl;
-
-    // Log information about the destination address
-    if (to != nullptr && tolen >= sizeof(sockaddr_in))
-    {
-        const sockaddr_in* addr = reinterpret_cast<const sockaddr_in*>(to);
-
-        char destAddrString[INET_ADDRSTRLEN];
-        if (inet_ntop(AF_INET, &(addr->sin_addr), destAddrString, INET_ADDRSTRLEN) != nullptr)
-        {
-            logMessage << "MySendTo Address: " << destAddrString << std::endl;
-            logMessage << "MySendTo Port: " << ntohs(addr->sin_port) << std::endl;
-        }
-        else
-        {
-            logMessage << "inet_ntop error " << std::endl;
-        }
-    }
-
-    Log(logMessage.str());
-
-    printRawBytes(buf, len);
-    return sendto(s, buf, len, flags, to, tolen);
-
-
-    const sockaddr_in* localAddress = reinterpret_cast<const sockaddr_in*>(to);
-
-    // Check for the specific byte sequence
-    const unsigned char JoinQueryHeader[] = {
-        0x0000006e,0x00000066,0x00000073,0x00000070,
-        0x00000073,0x00000032,0x0000002d,0x00000070
-    };
-
-    /*const unsigned char ClientRequestFunction = 0x2c;
-    const unsigned char ServerResponseFunction = 0x37;
-
-    static bool clientStarted = false;
-    static unsigned char originalBytes1[6] = { 0 };
-    static unsigned char newBytes1[6] = { 0 };
-
-    static bool serverStarted = false;
-    static unsigned char originalBytes2[6] = { 0 };
-    static unsigned char newBytes2[6] = { 0 };*/
-
-
-    //if (clientStarted || serverStarted) {
-    //    char* newBuffer = (char*)malloc(len);
-    //    memcpy(newBuffer, buf, len);
-
-    //    /*if (clientStarted) {
-    //        for (int i = 0; i <= len - 6; ++i) {
-    //            if (memcmp(newBuffer + i, originalBytes1, 6) == 0) {
-    //                const unsigned char newBytes[] = { 0xffffffad, 0x00000055, 0x00000036, 0xffffffa5, 0xffffffa5, 0xffffffa8 };
-    //                memcpy(newBuffer + i, newBytes, 6);
-    //            }
-    //        }
-    //    }
-    //    if (serverStarted) {
-    //        for (int i = 0; i <= len - 6; ++i) {
-    //            if (memcmp(newBuffer + i, originalBytes2, 6) == 0) {
-    //                const unsigned char newBytes[] = { 0xaa, 0x5a, 0x6d, 0x4b, 0x4b, 0x50 };
-    //                memcpy(newBuffer + i, newBytes, 6);
-    //            }
-    //        }
-    //    }*/
-    //    printRawBytes(newBuffer, len);
-    //    int result = sendto(s, newBuffer, len, flags, to, tolen);
-    //    free(newBuffer);
-    //    return result;
-    //}
-
-
-    if (len > sizeof(JoinQueryHeader) && std::memcmp(buf, JoinQueryHeader, sizeof(JoinQueryHeader)) == 0) {
-
-        static unsigned char newBytes1[1] = { 0 };
-        
-        char* newBuffer = (char*)malloc(len);
-        memcpy(newBuffer, buf, len);
-
-        // Generate random bytes
-        std::random_device rd;
-        std::mt19937 gen(rd());
-        std::uniform_int_distribution<> dis(0, 255);
-        for (int i = 0; i < 1; ++i) {
-            newBytes1[i] = static_cast<unsigned char>(dis(gen));
-        }
-
-        memcpy(newBuffer + 8, newBytes1, 1);
-
-        printRawBytes(newBuffer, len);
-        int result = sendto(s, newBuffer, len, flags, to, tolen);
-        free(newBuffer);
-
-        return result;
-
-        //unsigned char nextByte = buf[sizeof(JoinQueryHeader)];
-
-        //if (nextByte == ClientRequestFunction) {
-        //    Log("Client Request");
-
-        //    char* newBuffer = (char*)malloc(len);
-        //    memcpy(newBuffer, buf, len);
-
-        //    // Capture the original bytes
-        //    memcpy(originalBytes1, newBuffer + 68, 6);
-
-        //    // Generate random bytes
-        //    /*std::random_device rd;
-        //    std::mt19937 gen(rd());
-        //    std::uniform_int_distribution<> dis(0, 255);
-        //    for (int i = 0; i < 6; ++i) {
-        //        newBytes1[i] = static_cast<unsigned char>(dis(gen));
-        //    }*/
-
-        //    // Replace with new random bytes
-        //    //memcpy(newBuffer + 68, newBytes1, 6);
-        //    const unsigned char newBytes[] = { 0xffffffad, 0x00000055, 0x00000036, 0xffffffa5, 0xffffffa5, 0xffffffa8 };
-        //    //memcpy(newBuffer + 68, newBytes, 6);
-
-        //    clientStarted = true;
-
-        //    printRawBytes(newBuffer, len);
-        //    int result = sendto(s, newBuffer, len, flags, to, tolen);
-        //    free(newBuffer);
-
-        //    return result;
-        //}
-        ////if (nextByte == ClientRequestFunction) {//&& strcmp(inet_ntoa(localAddress->sin_addr), targetIPAddress) != 0) {
-        ////    Log("Client Request");
-
-        ////    char* newBuffer = (char*)malloc(len);
-        ////    memcpy(newBuffer, buf, len);
-
-        ////    /*const unsigned char newBytesA[] = { 0xffffff88 };
-        ////    std::memcpy(newBuffer + 56, newBytesA, sizeof(newBytesA));*/
-        ////    
-        ////    const unsigned char newBytesB[] = { 0xffffffad, 0x00000055, 0x00000036, 0xffffffa5, 0xffffffa5, 0xffffffa8 };
-        ////    std::memcpy(newBuffer + 68, newBytesB, sizeof(newBytesB));
-
-        ////    //////const unsigned char newBytes[] = { 0x04, 0x31, 0xad, 0x55, 0x36, 0xa5, 0xa5, 0xa8 };
-        ////    //const unsigned char newBytes[] = { 0x00 };//, 0x00, 0x00, 0x00, 0x00, 0x00 };
-        ////    ////const unsigned char newBytes[] = { 0x55, 0xad, 0x36, 0xa5, 0xa5, 0xa8 };
-        ////    //std::memcpy(newBuffer + 68, newBytes, sizeof(newBytes));
-
-        ////    printRawBytes(newBuffer, len);
-        ////    int result = sendto(s, newBuffer, len, flags, to, tolen);
-        ////    free(newBuffer);
-
-        ////    return result;
-        ////}
-        ////else if (nextByte == ServerResponseFunction) {
-        ////    Log("Server Response");
-        ////    // 78 -> 0x10
-        ////    // 90 -> 0000005a ffffffaa 0000006d 0000004b 0000004b 00000050
-
-        ////    char* newBuffer = (char*)malloc(len);
-        ////    memcpy(newBuffer, buf, len);
-
-        ////    /*const unsigned char newBytesA[] = { 0xffffffb7, 0xffffffd4, 0xffffffb8, 0xfffffffd, 0x00000050 };
-        ////    std::memcpy(newBuffer + 45, newBytesA, sizeof(newBytesA));*/
-
-        ////    /*const unsigned char newBytesA[] = { 0x10 };
-        ////    std::memcpy(newBuffer + 78, newBytesA, sizeof(newBytesA));*/
-
-        ////    const unsigned char newBytesB[] = { 0xaa, 0x5a, 0x6d, 0x4b, 0x4b, 0x50 };
-        ////    std::memcpy(newBuffer + 90, newBytesB, sizeof(newBytesB));
-
-        ////    printRawBytes(newBuffer, len);
-        ////    int result = sendto(s, newBuffer, len, flags, to, tolen);
-        ////    free(newBuffer);
-
-        ////    return result;
-        ////}
-        //else if (nextByte == ServerResponseFunction) {
-        //    Log("Server Response");
-
-        //    char* newBuffer = (char*)malloc(len);
-        //    memcpy(newBuffer, buf, len);
-
-        //    // Capture the original bytes
-        //    memcpy(originalBytes2, newBuffer + 90, 6);
-
-        //    // Generate random bytes
-        //    /*std::random_device rd;
-        //    std::mt19937 gen(rd());
-        //    std::uniform_int_distribution<> dis(0, 255);
-        //    for (int i = 0; i < 6; ++i) {
-        //        newBytes2[i] = static_cast<unsigned char>(dis(gen));
-        //    }*/
-
-        //    // Replace with new random bytes
-        //    //memcpy(newBuffer + 90, newBytes2, 6);
-        //    const unsigned char newBytes[] = { 0xaa, 0x5a, 0x6d, 0x4b, 0x4b, 0x50 };
-        //    //std::memcpy(newBuffer + 90, newBytes, 6);
-
-        //    serverStarted = true;
-
-        //    printRawBytes(newBuffer, len);
-        //    int result = sendto(s, newBuffer, len, flags, to, tolen);
-        //    free(newBuffer);
-
-        //    return result;
-        //}
-    }
-    //else if (len > sizeof(JoinConfirmHeader) && std::memcmp(buf, JoinConfirmHeader, sizeof(JoinConfirmHeader)) == 0) {
-
-    //    unsigned char nextByte = buf[sizeof(JoinQueryHeader)];
-
-    //    if (nextByte == ClientRequestFunction) {//&& strcmp(inet_ntoa(localAddress->sin_addr), targetIPAddress) != 0) {
-    //        Log("Client Request");
-
-    //        char* newBuffer = (char*)malloc(len);
-    //        memcpy(newBuffer, buf, len);
-
-    //        const unsigned char newBytesB[] = { 0xaa, 0x5a, 0x6d, 0x4b, 0x4b, 0x50 };
-    //        std::memcpy(newBuffer + 39, newBytesB, sizeof(newBytesB));
-
-    //        printRawBytes(newBuffer, len);
-    //        int result = sendto(s, newBuffer, len, flags, to, tolen);
-    //        free(newBuffer);
-
-    //        return result;
-    //    }
-    //}
-    /*else {
-
-        char* newBuffer = (char*)malloc(len);
-        memcpy(newBuffer, buf, len);
-
-        for (int i = 0; i <= len - 6; ++i) {
-            if (memcmp(newBuffer + i, originalBytes2, 6) == 0) {
-                memcpy(newBuffer + i, newBytes2, 6);
-            }
-        }
-    }*/
-
-    printRawBytes(buf, len);
-    return sendto(s, buf, len, flags, to, tolen);
-}
+//int WINAPI MySendTo(SOCKET s, const char* buf, int len, int flags, const struct sockaddr* to, int tolen)
+//{
+//    // Log information about the sendto call
+//    std::stringstream logMessage;
+//    logMessage << "sendto intercepted!" << std::endl;
+//    logMessage << "Socket: " << s << std::endl;
+//    logMessage << "Length: " << len << std::endl;
+//    logMessage << "Flags: " << flags << std::endl;
+//
+//    // Log information about the destination address
+//    if (to != nullptr && tolen >= sizeof(sockaddr_in))
+//    {
+//        const sockaddr_in* addr = reinterpret_cast<const sockaddr_in*>(to);
+//
+//        char destAddrString[INET_ADDRSTRLEN];
+//        if (inet_ntop(AF_INET, &(addr->sin_addr), destAddrString, INET_ADDRSTRLEN) != nullptr)
+//        {
+//            logMessage << "MySendTo Address: " << destAddrString << std::endl;
+//            logMessage << "MySendTo Port: " << ntohs(addr->sin_port) << std::endl;
+//        }
+//        else
+//        {
+//            logMessage << "inet_ntop error " << std::endl;
+//        }
+//    }
+//
+//    Log(logMessage.str());
+//
+//    printRawBytes(buf, len);
+//    return sendto(s, buf, len, flags, to, tolen);
+//}
+//
+//
+//    //const sockaddr_in* localAddress = reinterpret_cast<const sockaddr_in*>(to);
+//
+//    //// Check for the specific byte sequence
+//    //const unsigned char JoinQueryHeader[] = {
+//    //    0x0000006e,0x00000066,0x00000073,0x00000070,
+//    //    0x00000073,0x00000032,0x0000002d,0x00000070
+//    //};
+//
+//    ///*const unsigned char ClientRequestFunction = 0x2c;
+//    //const unsigned char ServerResponseFunction = 0x37;
+//
+//    //static bool clientStarted = false;
+//    //static unsigned char originalBytes1[6] = { 0 };
+//    //        logMessage << "MySendTo Address: " << destAddrString << std::endl;
+//    //        logMessage << "MySendTo Port: " << ntohs(addr->sin_port) << std::endl;
+//    //    }
+//    //    else
+//    //    {
+//    //        logMessage << "inet_ntop error " << std::endl;
+//    //    }
+//    //}
+//    //static unsigned char newBytes1[6] = { 0 };
+//
+//    //static bool serverStarted = false;
+//    //static unsigned char originalBytes2[6] = { 0 };
+//    //static unsigned char newBytes2[6] = { 0 };*/
+//
+//
+//    ////if (clientStarted || serverStarted) {
+//    ////    char* newBuffer = (char*)malloc(len);
+//    ////    memcpy(newBuffer, buf, len);
+//
+//    ////    /*if (clientStarted) {
+//    ////        for (int i = 0; i <= len - 6; ++i) {
+//    ////            if (memcmp(newBuffer + i, originalBytes1, 6) == 0) {
+//    ////                const unsigned char newBytes[] = { 0xffffffad, 0x00000055, 0x00000036, 0xffffffa5, 0xffffffa5, 0xffffffa8 };
+//    ////                memcpy(newBuffer + i, newBytes, 6);
+//    ////            }
+//    ////        }
+//    ////    }
+//    ////    if (serverStarted) {
+//    ////        for (int i = 0; i <= len - 6; ++i) {
+//    ////            if (memcmp(newBuffer + i, originalBytes2, 6) == 0) {
+//    ////                const unsigned char newBytes[] = { 0xaa, 0x5a, 0x6d, 0x4b, 0x4b, 0x50 };
+//    ////                memcpy(newBuffer + i, newBytes, 6);
+//    ////            }
+//    ////        }
+//    ////    }*/
+//    ////    printRawBytes(newBuffer, len);
+//    ////    int result = sendto(s, newBuffer, len, flags, to, tolen);
+//    ////    free(newBuffer);
+//    ////    return result;
+//    ////}
+//
+//
+//    //if (len > sizeof(JoinQueryHeader) && std::memcmp(buf, JoinQueryHeader, sizeof(JoinQueryHeader)) == 0) {
+//
+//    //    
+//    //    
+//    //    char* newBuffer = (char*)malloc(len);
+//    //    memcpy(newBuffer, buf, len);
+//
+//    //    
+//
+//    //    memcpy(newBuffer + 8, idBytes, 1);
+//
+//    //    printRawBytes(newBuffer, len);
+//    //    int result = sendto(s, newBuffer, len, flags, to, tolen);
+//    //    free(newBuffer);
+//
+//    //    return result;
+//
+//    //    //unsigned char nextByte = buf[sizeof(JoinQueryHeader)];
+//
+//    //    //if (nextByte == ClientRequestFunction) {
+//    //    //    Log("Client Request");
+//
+//    //    //    char* newBuffer = (char*)malloc(len);
+//    //    //    memcpy(newBuffer, buf, len);
+//
+//    //    //    // Capture the original bytes
+//    //    //    memcpy(originalBytes1, newBuffer + 68, 6);
+//
+//    //    //    // Generate random bytes
+//    //    //    /*std::random_device rd;
+//    //    //    std::mt19937 gen(rd());
+//    //    //    std::uniform_int_distribution<> dis(0, 255);
+//    //    //    for (int i = 0; i < 6; ++i) {
+//    //    //        newBytes1[i] = static_cast<unsigned char>(dis(gen));
+//    //    //    }*/
+//
+//    //    //    // Replace with new random bytes
+//    //    //    //memcpy(newBuffer + 68, newBytes1, 6);
+//    //    //    const unsigned char newBytes[] = { 0xffffffad, 0x00000055, 0x00000036, 0xffffffa5, 0xffffffa5, 0xffffffa8 };
+//    //    //    //memcpy(newBuffer + 68, newBytes, 6);
+//
+//    //    //    clientStarted = true;
+//
+//    //    //    printRawBytes(newBuffer, len);
+//    //    //    int result = sendto(s, newBuffer, len, flags, to, tolen);
+//    //    //    free(newBuffer);
+//
+//    //    //    return result;
+//    //    //}
+//    //    ////if (nextByte == ClientRequestFunction) {//&& strcmp(inet_ntoa(localAddress->sin_addr), targetIPAddress) != 0) {
+//    //    ////    Log("Client Request");
+//
+//    //    ////    char* newBuffer = (char*)malloc(len);
+//    //    ////    memcpy(newBuffer, buf, len);
+//
+//    //    ////    /*const unsigned char newBytesA[] = { 0xffffff88 };
+//    //    ////    std::memcpy(newBuffer + 56, newBytesA, sizeof(newBytesA));*/
+//    //    ////    
+//    //    ////    const unsigned char newBytesB[] = { 0xffffffad, 0x00000055, 0x00000036, 0xffffffa5, 0xffffffa5, 0xffffffa8 };
+//    //    ////    std::memcpy(newBuffer + 68, newBytesB, sizeof(newBytesB));
+//
+//    //    ////    //////const unsigned char newBytes[] = { 0x04, 0x31, 0xad, 0x55, 0x36, 0xa5, 0xa5, 0xa8 };
+//    //    ////    //const unsigned char newBytes[] = { 0x00 };//, 0x00, 0x00, 0x00, 0x00, 0x00 };
+//    //    ////    ////const unsigned char newBytes[] = { 0x55, 0xad, 0x36, 0xa5, 0xa5, 0xa8 };
+//    //    ////    //std::memcpy(newBuffer + 68, newBytes, sizeof(newBytes));
+//
+//    //    ////    printRawBytes(newBuffer, len);
+//    //    ////    int result = sendto(s, newBuffer, len, flags, to, tolen);
+//    //    ////    free(newBuffer);
+//
+//    //    ////    return result;
+//    //    ////}
+//    //    ////else if (nextByte == ServerResponseFunction) {
+//    //    ////    Log("Server Response");
+//    //    ////    // 78 -> 0x10
+//    //    ////    // 90 -> 0000005a ffffffaa 0000006d 0000004b 0000004b 00000050
+//
+//    //    ////    char* newBuffer = (char*)malloc(len);
+//    //    ////    memcpy(newBuffer, buf, len);
+//
+//    //    ////    /*const unsigned char newBytesA[] = { 0xffffffb7, 0xffffffd4, 0xffffffb8, 0xfffffffd, 0x00000050 };
+//    //    ////    std::memcpy(newBuffer + 45, newBytesA, sizeof(newBytesA));*/
+//
+//    //    ////    /*const unsigned char newBytesA[] = { 0x10 };
+//    //    ////    std::memcpy(newBuffer + 78, newBytesA, sizeof(newBytesA));*/
+//
+//    //    ////    const unsigned char newBytesB[] = { 0xaa, 0x5a, 0x6d, 0x4b, 0x4b, 0x50 };
+//    //    ////    std::memcpy(newBuffer + 90, newBytesB, sizeof(newBytesB));
+//
+//    //    ////    printRawBytes(newBuffer, len);
+//    //    ////    int result = sendto(s, newBuffer, len, flags, to, tolen);
+//    //    ////    free(newBuffer);
+//
+//    //    ////    return result;
+//    //    ////}
+//    //    //else if (nextByte == ServerResponseFunction) {
+//    //    //    Log("Server Response");
+//
+//    //    //    char* newBuffer = (char*)malloc(len);
+//    //    //    memcpy(newBuffer, buf, len);
+//
+//    //    //    // Capture the original bytes
+//    //    //    memcpy(originalBytes2, newBuffer + 90, 6);
+//
+//    //    //    // Generate random bytes
+//    //    //    /*std::random_device rd;
+//    //    //    std::mt19937 gen(rd());
+//    //    //    std::uniform_int_distribution<> dis(0, 255);
+//    //    //    for (int i = 0; i < 6; ++i) {
+//    //    //        newBytes2[i] = static_cast<unsigned char>(dis(gen));
+//    //    //    }*/
+//
+//    //    //    // Replace with new random bytes
+//    //    //    //memcpy(newBuffer + 90, newBytes2, 6);
+//    //    //    const unsigned char newBytes[] = { 0xaa, 0x5a, 0x6d, 0x4b, 0x4b, 0x50 };
+//    //    //    //std::memcpy(newBuffer + 90, newBytes, 6);
+//
+//    //    //    serverStarted = true;
+//
+//    //    //    printRawBytes(newBuffer, len);
+//    //    //    int result = sendto(s, newBuffer, len, flags, to, tolen);
+//    //    //    free(newBuffer);
+//
+//    //    //    return result;
+//    //    //}
+//    //}
+//    ////else if (len > sizeof(JoinConfirmHeader) && std::memcmp(buf, JoinConfirmHeader, sizeof(JoinConfirmHeader)) == 0) {
+//
+//    ////    unsigned char nextByte = buf[sizeof(JoinQueryHeader)];
+//
+//    ////    if (nextByte == ClientRequestFunction) {//&& strcmp(inet_ntoa(localAddress->sin_addr), targetIPAddress) != 0) {
+//    ////        Log("Client Request");
+//
+//    ////        char* newBuffer = (char*)malloc(len);
+//    ////        memcpy(newBuffer, buf, len);
+//
+//    ////        const unsigned char newBytesB[] = { 0xaa, 0x5a, 0x6d, 0x4b, 0x4b, 0x50 };
+//    ////        std::memcpy(newBuffer + 39, newBytesB, sizeof(newBytesB));
+//
+//    ////        printRawBytes(newBuffer, len);
+//    ////        int result = sendto(s, newBuffer, len, flags, to, tolen);
+//    ////        free(newBuffer);
+//
+//    ////        return result;
+//    ////    }
+//    ////}
+//    ///*else {
+//
+//    //    char* newBuffer = (char*)malloc(len);
+//    //    memcpy(newBuffer, buf, len);
+//
+//    //    for (int i = 0; i <= len - 6; ++i) {
+//    //        if (memcmp(newBuffer + i, originalBytes2, 6) == 0) {
+//    //            memcpy(newBuffer + i, newBytes2, 6);
+//    //        }
+//    //    }
+//    //}*/
+//
+//    //printRawBytes(buf, len);
+//    //return sendto(s, buf, len, flags, to, tolen);
+//}
 
 // Function to convert a hexadecimal string to an integer
 unsigned int hexToUInt(const std::string& hexStr) {
@@ -850,157 +856,155 @@ void SetHardwareBreakpoint(void* address) {
     SetThreadContext(hThread, &context);
 }
 
-
-
-int WINAPI MyRecvFrom(SOCKET s, char* buf, int len, int flags, struct sockaddr* from, int* fromlen)
-{
-    std::stringstream logMessage;
-
-    int result = recvfrom(s, buf, len, flags, from, fromlen);
-
-    sockaddr_in* localAddress = reinterpret_cast<sockaddr_in*>(from);
-
-    /*if (strcmp(inet_ntoa(localAddress->sin_addr), targetIPAddress) == 0)
-        return WSAETIMEDOUT;*/
-
-    logMessage << "MyRecvFrom Local Address: " << inet_ntoa(localAddress->sin_addr) << std::endl;
-    logMessage << "MyRecvFrom Local Port: " << ntohs(localAddress->sin_port) << std::endl;
-    logMessage << "MyRecvFrom Family: " << ntohs(localAddress->sin_family) << std::endl;
-    logMessage << "MyRecvFrom: socket - " << s << std::endl;
-    printRawBytes(buf, len);
-    logMessage << "MyRecvFrom: Length - " << len << std::endl;
-    logMessage << "MyRecvFrom: Flags - " << flags << std::endl;
-    logMessage << "MyRecvFrom: From length - " << fromlen << std::endl;
-
-
-    // Check for the specific byte sequence
-    //const unsigned char JoinQueryHeader[] = {
-    //    0x00, 0x00, 0x00, 0x00, 0x6a, 0xb0, 0xc0, 0xf4, 0x00, 0x00, 0x00, 0x01,
-    //    0x00, 0x00, 0x00, 0x0b, 0x00, 0x02, 0x77, 0xc9, 0x00, 0x00, 0x00, 0x03, 
-    //    0x00, 0x00, 0x00, 0x03, 0x00
-    //};
-    //
-    //const unsigned char ClientRequestFunction = 0x2c;
-    //const unsigned char ServerResponseFunction = 0x37;
-    //
-    //if (result > sizeof(JoinQueryHeader) && std::memcmp(buf, JoinQueryHeader, sizeof(JoinQueryHeader)) == 0) {
-    //
-    //    // Check the next byte for "Join Request" or "Join Response"
-    //    unsigned char nextByte = buf[sizeof(JoinQueryHeader)];
-    //
-    //    if (nextByte == ClientRequestFunction && strcmp(inet_ntoa(localAddress->sin_addr), targetIPAddress) != 0) {
-    //        logMessage << "Client Request" << std::endl;
-    //
-    //        const unsigned char newBytes[] = { 0x04, 0x31, 0xad, 0x55, 0x36, 0xa5, 0xa5, 0xa8 };
-    //        std::memcpy(buf + 66, newBytes, sizeof(newBytes));
-    //
-    //        //std::memset(buf + 89, 0, len - 89);
-    //
-    //        //const unsigned char newBytes[] = { 0x26, 0x05, 0x40, 0x00, 0x88, 0x60, 0x14 };
-    //        //std::memcpy(buf + 52, newBytes, sizeof(newBytes));
-    //
-    //        /*const unsigned char newBytes[] = {
-    //            0x00, 0x00, 0x00, 0x00, 0x6a, 0xb0, 0xc0, 0xf4, 0x00, 0x00, 0x00, 0x01,
-    //            0x00, 0x00, 0x00, 0x0b, 0x00, 0x02, 0x77, 0xc9, 0x00, 0x00, 0x00, 0x03,
-    //            0x00, 0x00, 0x00, 0x03, 0x00, 0x2c, 0x9f, 0x93, 0xa8, 0x58, 0x55, 0xff,
-    //            0x9a, 0xac, 0x30, 0x3d, 0x01, 0xaf, 0x24, 0x3c, 0x50, 0xf0, 0x35, 0x22,
-    //            0xe6, 0xbf, 0x9c, 0xb8, 0x26, 0x05, 0x40, 0x00, 0x88, 0x60, 0x14, 0xb8,
-    //            0x20, 0x00, 0x00, 0x00, 0x00, 0x00, 0x04, 0x31, 0xad, 0x55, 0x36, 0xa5,
-    //            0xa5, 0xa8, 0x18, 0x05, 0xe0, 0x00, 0x12, 0xec, 0x50, 0x60, 0x52, 0xee,
-    //            0xd6, 0x50, 0x5a, 0x52, 0xf0, 0x70, 0x6b, 0xfe, 0xf6, 0x7f, 0x00, 0x00,
-    //            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0xcc, 0x4c, 0x3f, 0x0b,
-    //            0xd7, 0xa3, 0x3e, 0x97, 0x00, 0x00, 0x00, 0x10, 0xa5, 0xb0, 0xf3, 0xd5,
-    //            0x01, 0x00, 0x00, 0x30, 0xb8, 0x30, 0x84, 0xd5, 0x01, 0x00, 0x00, 0x00,
-    //            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-    //            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0xd5, 0x00, 0x00, 0x00,
-    //            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xb0, 0xf3, 0x00, 0x00,
-    //            0x00, 0x00, 0x00, 0x00, 0xc8, 0x9e, 0x6b, 0xfe, 0xf6, 0x7f, 0x00, 0x00,
-    //            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00,
-    //            0x00, 0x00, 0x00, 0x97, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x00,
-    //            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-    //            0x00, 0x00, 0x00, 0x00
-    //            };*/
-    //
-    //        //buf = new char[sizeof(newBytes)];
-    //        //std::memcpy(buf, newBytes, sizeof(newBytes));
-    //    }
-    //    else if (nextByte == ServerResponseFunction) {
-    //        logMessage << "Server Response" << std::endl;
-    //    }
-    //}
-
-
-    
-    // Modify the instruction
-    //DWORD oldProtect;
-    //BYTE* instructionAddress = (BYTE*)0x00007FF62FEE5BAF; // The address to modify
-
-    //// Change memory protection to write
-    //if (VirtualProtect(instructionAddress, 2, PAGE_EXECUTE_READWRITE, &oldProtect)) {
-    //    instructionAddress[0] = 0xEB; // Opcode for JMP (short jump)
-    //    // Note: The operand (jump address) remains unchanged
-
-    //    // Restore the original memory protection
-    //    VirtualProtect(instructionAddress, 2, oldProtect, &oldProtect);
-    //}
-    //else {
-    //    logMessage << "Failed to change memory protection." << std::endl;
-    //}
-
-
-    // Check if the call was successful and the buffer length is 0
-    //if (result != SOCKET_ERROR && from != nullptr && from->sa_family == AF_INET)
-    //{
-    //    Log("Success");
-    //    sockaddr_in* senderAddr = reinterpret_cast<sockaddr_in*>(from);
-
-    //    // Check if the sender's IPv4 address matches the specified address
-    //    char senderIP[INET_ADDRSTRLEN];
-    //    inet_ntop(AF_INET, &(senderAddr->sin_addr), senderIP, INET_ADDRSTRLEN);
-    //    inet_pton(AF_INET, "192.168.1.2", &(senderAddr->sin_addr));
-    //    senderAddr->sin_port = htons(12345);
-
-    //    std::string hexString = "00000000 00000000 00000000 00000000 0000006a ffffffb0 ffffffc0 fffffff4 00000000 00000000 00000000 00000001 00000000 00000000 00000000 0000000b 00000000 00000002 00000077 ffffffc9 00000000 00000000 00000000 00000003 00000000 00000000 00000000 00000003 00000000 0000002c ffffff9f";
-    //    hexString.erase(std::remove(hexString.begin(), hexString.end(), ' '), hexString.end());
-    //    size_t bufferSize = hexString.length() / 2;
-    //    char* buffer = new char[bufferSize];
-    //    hexStringToCharArray(hexString, buffer);
-    //    *buf = *buffer;
-
-    //    logMessage << "Set content" << std::endl;
-
-    //    if (strcmp(senderIP, hostIPAddress) == 0)
-    //    {
-    //        // Modify the sender's IPv4 address to 192.168.0.22
-    //        /*inet_pton(AF_INET, "192.168.0.22", &(senderAddr->sin_addr));
-    //        senderAddr->sin_port = htons(56515);
-    //        *fromlen = 0x00000063E89FF890;*/
-    //        std::string hexString = "00000000 00000000 00000000 00000000 0000006a ffffffb0 ffffffc0 fffffff4 00000000 00000000 00000000 00000001 00000000 00000000 00000000 0000000b 00000000 00000002 00000077 ffffffc9 00000000 00000000 00000000 00000003 00000000 00000000 00000000 00000003 00000000 00000037 ffffffc7 0000000d ffffff88 fffffff7 0000003b 0000005b 00000002 00000028 ffffffab ffffffa2 ffffffa9 00000060 00000000 00000000 00000009 00000075 00000060 ffffff9b fffffffd ffffff85 00000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000 ffffff8f ffffffff ffffffff ffffffff fffffffc 0000003c 00000021 00000000 00000008 0000001f ffffffe6 ffffffa4 0000005c ffffffd7 fffffff3 ffffff97 00000004 ffffffc0 ffffffa8 00000000 0000000f 0000000c 00000002 ffffff97 00000004 00000000 00000000 00000000 00000000 00000000 00000000 ffffff86 00000033 00000020 ffffffdd 00000074 00000001 00000004 ffffff83 00000000 ffffffbc 00000000 00000002 0000005d ffffff8a 0000000c 0000000a 0000005d ffffffda ffffffca 0000000b 0000004a 0000005e 00000000";
-    //        hexString.erase(std::remove(hexString.begin(), hexString.end(), ' '), hexString.end());
-    //        size_t bufferSize = hexString.length() / 2;
-    //        char* buffer = new char[bufferSize];
-    //        hexStringToCharArray(hexString, buffer);
-
-    //        logMessage << "Force send" << std::endl;
-    //        MySendTo(s, buffer, bufferSize, flags, from, *fromlen);
-    //    }
-    //}
-
-    /*localAddress = reinterpret_cast<sockaddr_in*>(from);
-
-    logMessage << "MyRecvFrom Local Address 2: " << inet_ntoa(localAddress->sin_addr) << std::endl;
-    logMessage << "MyRecvFrom Local Port 2: " << ntohs(localAddress->sin_port) << std::endl;
-    logMessage << "MyRecvFrom Family 2: " << ntohs(localAddress->sin_family) << std::endl;
-    logMessage << "MyRecvFrom: socket 2 - " << s << std::endl;
-    logMessage << "MyRecvFrom: Received data 2 - " << buf << std::endl;
-    logMessage << "MyRecvFrom: Length 2 - " << len << std::endl;
-    logMessage << "MyRecvFrom: Flags 2 - " << flags << std::endl;
-    logMessage << "MyRecvFrom: From length 2 - " << fromlen << std::endl;*/
-
-    Log(logMessage.str());
-
-    return result;
-}
+//int WINAPI MyRecvFrom(SOCKET s, char* buf, int len, int flags, struct sockaddr* from, int* fromlen)
+//{
+//    std::stringstream logMessage;
+//
+//    int result = recvfrom(s, buf, len, flags, from, fromlen);
+//
+//    sockaddr_in* localAddress = reinterpret_cast<sockaddr_in*>(from);
+//
+//    /*if (strcmp(inet_ntoa(localAddress->sin_addr), targetIPAddress) == 0)
+//        return WSAETIMEDOUT;*/
+//
+//    logMessage << "MyRecvFrom Local Address: " << inet_ntoa(localAddress->sin_addr) << std::endl;
+//    logMessage << "MyRecvFrom Local Port: " << ntohs(localAddress->sin_port) << std::endl;
+//    logMessage << "MyRecvFrom Family: " << ntohs(localAddress->sin_family) << std::endl;
+//    logMessage << "MyRecvFrom: socket - " << s << std::endl;
+//    printRawBytes(buf, len);
+//    logMessage << "MyRecvFrom: Length - " << len << std::endl;
+//    logMessage << "MyRecvFrom: Flags - " << flags << std::endl;
+//    logMessage << "MyRecvFrom: From length - " << fromlen << std::endl;
+//
+//
+//    // Check for the specific byte sequence
+//    //const unsigned char JoinQueryHeader[] = {
+//    //    0x00, 0x00, 0x00, 0x00, 0x6a, 0xb0, 0xc0, 0xf4, 0x00, 0x00, 0x00, 0x01,
+//    //    0x00, 0x00, 0x00, 0x0b, 0x00, 0x02, 0x77, 0xc9, 0x00, 0x00, 0x00, 0x03, 
+//    //    0x00, 0x00, 0x00, 0x03, 0x00
+//    //};
+//    //
+//    //const unsigned char ClientRequestFunction = 0x2c;
+//    //const unsigned char ServerResponseFunction = 0x37;
+//    //
+//    //if (result > sizeof(JoinQueryHeader) && std::memcmp(buf, JoinQueryHeader, sizeof(JoinQueryHeader)) == 0) {
+//    //
+//    //    // Check the next byte for "Join Request" or "Join Response"
+//    //    unsigned char nextByte = buf[sizeof(JoinQueryHeader)];
+//    //
+//    //    if (nextByte == ClientRequestFunction && strcmp(inet_ntoa(localAddress->sin_addr), targetIPAddress) != 0) {
+//    //        logMessage << "Client Request" << std::endl;
+//    //
+//    //        const unsigned char newBytes[] = { 0x04, 0x31, 0xad, 0x55, 0x36, 0xa5, 0xa5, 0xa8 };
+//    //        std::memcpy(buf + 66, newBytes, sizeof(newBytes));
+//    //
+//    //        //std::memset(buf + 89, 0, len - 89);
+//    //
+//    //        //const unsigned char newBytes[] = { 0x26, 0x05, 0x40, 0x00, 0x88, 0x60, 0x14 };
+//    //        //std::memcpy(buf + 52, newBytes, sizeof(newBytes));
+//    //
+//    //        /*const unsigned char newBytes[] = {
+//    //            0x00, 0x00, 0x00, 0x00, 0x6a, 0xb0, 0xc0, 0xf4, 0x00, 0x00, 0x00, 0x01,
+//    //            0x00, 0x00, 0x00, 0x0b, 0x00, 0x02, 0x77, 0xc9, 0x00, 0x00, 0x00, 0x03,
+//    //            0x00, 0x00, 0x00, 0x03, 0x00, 0x2c, 0x9f, 0x93, 0xa8, 0x58, 0x55, 0xff,
+//    //            0x9a, 0xac, 0x30, 0x3d, 0x01, 0xaf, 0x24, 0x3c, 0x50, 0xf0, 0x35, 0x22,
+//    //            0xe6, 0xbf, 0x9c, 0xb8, 0x26, 0x05, 0x40, 0x00, 0x88, 0x60, 0x14, 0xb8,
+//    //            0x20, 0x00, 0x00, 0x00, 0x00, 0x00, 0x04, 0x31, 0xad, 0x55, 0x36, 0xa5,
+//    //            0xa5, 0xa8, 0x18, 0x05, 0xe0, 0x00, 0x12, 0xec, 0x50, 0x60, 0x52, 0xee,
+//    //            0xd6, 0x50, 0x5a, 0x52, 0xf0, 0x70, 0x6b, 0xfe, 0xf6, 0x7f, 0x00, 0x00,
+//    //            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0xcc, 0x4c, 0x3f, 0x0b,
+//    //            0xd7, 0xa3, 0x3e, 0x97, 0x00, 0x00, 0x00, 0x10, 0xa5, 0xb0, 0xf3, 0xd5,
+//    //            0x01, 0x00, 0x00, 0x30, 0xb8, 0x30, 0x84, 0xd5, 0x01, 0x00, 0x00, 0x00,
+//    //            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+//    //            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0xd5, 0x00, 0x00, 0x00,
+//    //            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xb0, 0xf3, 0x00, 0x00,
+//    //            0x00, 0x00, 0x00, 0x00, 0xc8, 0x9e, 0x6b, 0xfe, 0xf6, 0x7f, 0x00, 0x00,
+//    //            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00,
+//    //            0x00, 0x00, 0x00, 0x97, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x00,
+//    //            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+//    //            0x00, 0x00, 0x00, 0x00
+//    //            };*/
+//    //
+//    //        //buf = new char[sizeof(newBytes)];
+//    //        //std::memcpy(buf, newBytes, sizeof(newBytes));
+//    //    }
+//    //    else if (nextByte == ServerResponseFunction) {
+//    //        logMessage << "Server Response" << std::endl;
+//    //    }
+//    //}
+//
+//
+//    
+//    // Modify the instruction
+//    //DWORD oldProtect;
+//    //BYTE* instructionAddress = (BYTE*)0x00007FF62FEE5BAF; // The address to modify
+//
+//    //// Change memory protection to write
+//    //if (VirtualProtect(instructionAddress, 2, PAGE_EXECUTE_READWRITE, &oldProtect)) {
+//    //    instructionAddress[0] = 0xEB; // Opcode for JMP (short jump)
+//    //    // Note: The operand (jump address) remains unchanged
+//
+//    //    // Restore the original memory protection
+//    //    VirtualProtect(instructionAddress, 2, oldProtect, &oldProtect);
+//    //}
+//    //else {
+//    //    logMessage << "Failed to change memory protection." << std::endl;
+//    //}
+//
+//
+//    // Check if the call was successful and the buffer length is 0
+//    //if (result != SOCKET_ERROR && from != nullptr && from->sa_family == AF_INET)
+//    //{
+//    //    Log("Success");
+//    //    sockaddr_in* senderAddr = reinterpret_cast<sockaddr_in*>(from);
+//
+//    //    // Check if the sender's IPv4 address matches the specified address
+//    //    char senderIP[INET_ADDRSTRLEN];
+//    //    inet_ntop(AF_INET, &(senderAddr->sin_addr), senderIP, INET_ADDRSTRLEN);
+//    //    inet_pton(AF_INET, "192.168.1.2", &(senderAddr->sin_addr));
+//    //    senderAddr->sin_port = htons(12345);
+//
+//    //    std::string hexString = "00000000 00000000 00000000 00000000 0000006a ffffffb0 ffffffc0 fffffff4 00000000 00000000 00000000 00000001 00000000 00000000 00000000 0000000b 00000000 00000002 00000077 ffffffc9 00000000 00000000 00000000 00000003 00000000 00000000 00000000 00000003 00000000 0000002c ffffff9f";
+//    //    hexString.erase(std::remove(hexString.begin(), hexString.end(), ' '), hexString.end());
+//    //    size_t bufferSize = hexString.length() / 2;
+//    //    char* buffer = new char[bufferSize];
+//    //    hexStringToCharArray(hexString, buffer);
+//    //    *buf = *buffer;
+//
+//    //    logMessage << "Set content" << std::endl;
+//
+//    //    if (strcmp(senderIP, hostIPAddress) == 0)
+//    //    {
+//    //        // Modify the sender's IPv4 address to 192.168.0.22
+//    //        /*inet_pton(AF_INET, "192.168.0.22", &(senderAddr->sin_addr));
+//    //        senderAddr->sin_port = htons(56515);
+//    //        *fromlen = 0x00000063E89FF890;*/
+//    //        std::string hexString = "00000000 00000000 00000000 00000000 0000006a ffffffb0 ffffffc0 fffffff4 00000000 00000000 00000000 00000001 00000000 00000000 00000000 0000000b 00000000 00000002 00000077 ffffffc9 00000000 00000000 00000000 00000003 00000000 00000000 00000000 00000003 00000000 00000037 ffffffc7 0000000d ffffff88 fffffff7 0000003b 0000005b 00000002 00000028 ffffffab ffffffa2 ffffffa9 00000060 00000000 00000000 00000009 00000075 00000060 ffffff9b fffffffd ffffff85 00000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000 ffffff8f ffffffff ffffffff ffffffff fffffffc 0000003c 00000021 00000000 00000008 0000001f ffffffe6 ffffffa4 0000005c ffffffd7 fffffff3 ffffff97 00000004 ffffffc0 ffffffa8 00000000 0000000f 0000000c 00000002 ffffff97 00000004 00000000 00000000 00000000 00000000 00000000 00000000 ffffff86 00000033 00000020 ffffffdd 00000074 00000001 00000004 ffffff83 00000000 ffffffbc 00000000 00000002 0000005d ffffff8a 0000000c 0000000a 0000005d ffffffda ffffffca 0000000b 0000004a 0000005e 00000000";
+//    //        hexString.erase(std::remove(hexString.begin(), hexString.end(), ' '), hexString.end());
+//    //        size_t bufferSize = hexString.length() / 2;
+//    //        char* buffer = new char[bufferSize];
+//    //        hexStringToCharArray(hexString, buffer);
+//
+//    //        logMessage << "Force send" << std::endl;
+//    //        MySendTo(s, buffer, bufferSize, flags, from, *fromlen);
+//    //    }
+//    //}
+//
+//    /*localAddress = reinterpret_cast<sockaddr_in*>(from);
+//
+//    logMessage << "MyRecvFrom Local Address 2: " << inet_ntoa(localAddress->sin_addr) << std::endl;
+//    logMessage << "MyRecvFrom Local Port 2: " << ntohs(localAddress->sin_port) << std::endl;
+//    logMessage << "MyRecvFrom Family 2: " << ntohs(localAddress->sin_family) << std::endl;
+//    logMessage << "MyRecvFrom: socket 2 - " << s << std::endl;
+//    logMessage << "MyRecvFrom: Received data 2 - " << buf << std::endl;
+//    logMessage << "MyRecvFrom: Length 2 - " << len << std::endl;
+//    logMessage << "MyRecvFrom: Flags 2 - " << flags << std::endl;
+//    logMessage << "MyRecvFrom: From length 2 - " << fromlen << std::endl;*/
+//
+//    Log(logMessage.str());
+//
+//    return result;
+//}
 
 int WINAPI MyCloseSocket(SOCKET s)
 {
@@ -1257,51 +1261,51 @@ hostent* WSAAPI MyGetHostByName(const char* name)
     std::stringstream logMessage;
     // Call the original gethostbyname function
     hostent* result = gethostbyname(name);
-     
+    
     // Allocate memory for the custom hostent structure
-    //hostent* customHostEnt = new hostent;
-    //
-    //// Set the hostent fields
-    //customHostEnt->h_name = _strdup(targetHostname);  // Set the host name
-    //customHostEnt->h_aliases = nullptr;           // No aliases for simplicity
-    //customHostEnt->h_addrtype = AF_INET;          // IPv4 address
-    //customHostEnt->h_length = sizeof(in_addr);    // Length of address
-    //customHostEnt->h_addr_list = new char* [2];    // Allocate an array of pointers
-    //
+    hostent* customHostEnt = new hostent;
+    
+    // Set the hostent fields
+    customHostEnt->h_name = _strdup(targetHostname);  // Set the host name
+    customHostEnt->h_aliases = nullptr;           // No aliases for simplicity
+    customHostEnt->h_addrtype = AF_INET;          // IPv4 address
+    customHostEnt->h_length = sizeof(in_addr);    // Length of address
+    customHostEnt->h_addr_list = new char* [2];    // Allocate an array of pointers
+    
 
-    //std::string baseIP = "192.168.0.";
+    std::string baseIP = "192.168.0.";
 
-    //// Initialize random seed
-    //std::srand(std::time(0));
+    // Initialize random seed
+    std::srand(std::time(0));
+    
+    // Generate a random number from 0 to 999
+    int lastDigits = std::rand() % 1000;
 
-    //// Generate a random number from 0 to 999
-    //int lastDigits = std::rand() % 1000;
+    // Combine the base IP with the random last digits
+    std::string randomizedIP = baseIP + std::to_string(lastDigits);
 
-    //// Combine the base IP with the random last digits
-    //std::string randomizedIP = baseIP + std::to_string(lastDigits);
-
-    //std::cout << "Randomized IP Address: " << randomizedIP << std::endl;
+    std::cout << "Randomized IP Address: " << randomizedIP << std::endl;
 
 
-    //// Allocate memory for the custom IP address and copy it
-    //in_addr customAddress;
-    //inet_pton(AF_INET, randomizedIP.c_str(), &customAddress);
-    //customHostEnt->h_addr_list[0] = new char[sizeof(in_addr)];
-    //memcpy(customHostEnt->h_addr_list[0], &customAddress, sizeof(in_addr));
+    // Allocate memory for the custom IP address and copy it
+    in_addr customAddress;
+    inet_pton(AF_INET, randomizedIP.c_str(), &customAddress);
+    customHostEnt->h_addr_list[0] = new char[sizeof(in_addr)];
+    memcpy(customHostEnt->h_addr_list[0], &customAddress, sizeof(in_addr));
 
-    //// Terminate the list with a nullptr
-    //customHostEnt->h_addr_list[1] = nullptr;
+    // Terminate the list with a nullptr
+    customHostEnt->h_addr_list[1] = nullptr;
 
     // Access and print the custom hostent information
     logMessage << "Original Host Name: " << name << std::endl;
-    /*logMessage << "Custom Host Name: " << customHostEnt->h_name << std::endl;
+    logMessage << "Custom Host Name: " << customHostEnt->h_name << std::endl;
     logMessage << "Custom IP Address: " << inet_ntoa(customAddress) << std::endl;
-    */
+    
     // Clean up memory
-    /*delete[] customHostEnt->h_name;
+    delete[] customHostEnt->h_name;
     delete[] customHostEnt->h_addr_list[0];
     delete[] customHostEnt->h_addr_list;
-    delete customHostEnt;*/
+    delete customHostEnt;
 
     Log(logMessage.str());
 
@@ -1625,9 +1629,13 @@ int WINAPI MyWSARecvFrom(SOCKET s, LPWSABUF lpBuffers, DWORD dwBufferCount, LPDW
     //    return result;
     //}
 
+
     // Log sender's address and port
     if (lpFrom->sa_family == AF_INET) { // IPv4
         struct sockaddr_in* ipv4 = (struct sockaddr_in*)lpFrom;
+
+        //inet_pton(AF_INET, "192.168.0.123", &(ipv4->sin_addr));
+
         char addr[INET_ADDRSTRLEN];
         inet_ntop(AF_INET, &(ipv4->sin_addr), addr, INET_ADDRSTRLEN);
         int port = ntohs(ipv4->sin_port);
@@ -1641,7 +1649,7 @@ int WINAPI MyWSARecvFrom(SOCKET s, LPWSABUF lpBuffers, DWORD dwBufferCount, LPDW
 
     if (lpNumberOfBytesRecvd && *lpNumberOfBytesRecvd > 0) {
         for (DWORD i = 0; i < dwBufferCount; ++i) {
-            printRawBytes(lpBuffers[i].buf, lpBuffers[i].len);
+            //printRawBytes(lpBuffers[i].buf, lpBuffers[i].len);
             //logMessage << "Payload: " << lpBuffers[i].buf << " Length: " << lpBuffers[i].len;
         }
     }
@@ -1714,64 +1722,110 @@ void LogSockAddr(const SOCKADDR* sa, socklen_t saLen) {
 
 INT WINAPI MyGetAddrInfo(PCSTR pNodeName, PCSTR pServiceName, const ADDRINFOA* pHints, PADDRINFOA* ppResult)
 {
-    // Call the original getaddrinfo function
-    INT result = getaddrinfo(originalHostname, pServiceName, pHints, ppResult);
+    Log("getaddrinfo hooked");
 
-    return -1;
-
-    // Log after the getaddrinfo call
-    Log("getaddrinfo");
-    Log(originalHostname);
-    //Log(pServiceName);
-
-    // Log additional information if needed, e.g., results
-    if (result == 0 && *ppResult != nullptr) {
-        // Traverse the linked list and keep only the matching result
-        PADDRINFOA pCurrent = *ppResult;
-        PADDRINFOA pPrev = nullptr;
-
-        while (pCurrent != nullptr)
-        {
-            sockaddr* sa = pCurrent->ai_addr;
-
-            if (sa->sa_family == AF_INET) {
-                const sockaddr_in* sa4 = reinterpret_cast<const sockaddr_in*>(sa);
-                char ip4[INET_ADDRSTRLEN];
-                inet_ntop(AF_INET, &(sa4->sin_addr), ip4, INET_ADDRSTRLEN);
-
-                // Check if the current result matches the specified IPv4 address
-                if (strcmp(ip4, targetIPAddress) == 0) {
-                    pCurrent->ai_next = nullptr;
-                    *ppResult = pCurrent;
-                    break;
-                }
-            }
-
-            pCurrent = pCurrent->ai_next;
-        }
-
-        pCurrent = *ppResult;
-
-        while (pCurrent != nullptr) {
-            sockaddr* sa = pCurrent->ai_addr;
-
-            // Log information about the address
-            Log("Address information:");
-            Log("  Family: " + std::to_string(pCurrent->ai_family));
-            Log("  Type: " + std::to_string(pCurrent->ai_socktype));
-            Log("  Protocol: " + std::to_string(pCurrent->ai_protocol));
-
-            // Log sockaddr information
-            LogSockAddr(sa);
-
-            // Move to the next element
-            pPrev = pCurrent;
-            pCurrent = pCurrent->ai_next;
-        }
+    // Allocate memory for the new ADDRINFOA structure
+    PADDRINFOA pCustomResult = (PADDRINFOA)malloc(sizeof(ADDRINFOA));
+    if (!pCustomResult) {
+        return EAI_MEMORY; // Return an error if the allocation fails
     }
 
+    // Clear the memory
+    ZeroMemory(pCustomResult, sizeof(ADDRINFOA));
 
-    return result;//EAI_NONAME;
+    // Set up the custom address info
+    pCustomResult->ai_family = AF_INET; // For IPv4, use AF_INET6 for IPv6
+    pCustomResult->ai_socktype = SOCK_STREAM; // or SOCK_DGRAM for UDP
+    pCustomResult->ai_protocol = IPPROTO_TCP; // or IPPROTO_UDP for UDP
+
+    // Allocate and set up the sockaddr structure
+    pCustomResult->ai_addrlen = sizeof(sockaddr_in);
+    pCustomResult->ai_addr = (struct sockaddr*)malloc(sizeof(sockaddr_in));
+    if (!pCustomResult->ai_addr) {
+        free(pCustomResult);
+        return EAI_MEMORY;
+    }
+
+    std::string baseIP = "192.168.0.";
+
+    // Initialize random seed
+    std::srand(std::time(0));
+
+    // Generate a random number from 0 to 999
+    int lastDigits = std::rand() % 1000;
+
+    // Combine the base IP with the random last digits
+    std::string randomizedIP = baseIP + std::to_string(lastDigits);
+
+    std::cout << "Randomized IP Address: " << randomizedIP << std::endl;
+
+
+    struct sockaddr_in* sockAddr = (struct sockaddr_in*)pCustomResult->ai_addr;
+    sockAddr->sin_family = AF_INET;
+    sockAddr->sin_port = htons(80); // Replace with your desired port
+    inet_pton(AF_INET, randomizedIP.c_str(), &sockAddr->sin_addr); // Replace with your desired IP
+
+    // Set the result
+    *ppResult = pCustomResult;
+
+    return 0; // Return success
+
+    //// Call the original getaddrinfo function
+    //INT result = getaddrinfo(originalHostname, pServiceName, pHints, ppResult);
+
+    //// Log after the getaddrinfo call
+    //Log("getaddrinfo");
+    //Log(originalHostname);
+    ////Log(pServiceName);
+
+    //// Log additional information if needed, e.g., results
+    //if (result == 0 && *ppResult != nullptr) {
+    //    // Traverse the linked list and keep only the matching result
+    //    PADDRINFOA pCurrent = *ppResult;
+    //    PADDRINFOA pPrev = nullptr;
+
+    //    while (pCurrent != nullptr)
+    //    {
+    //        sockaddr* sa = pCurrent->ai_addr;
+
+    //        if (sa->sa_family == AF_INET) {
+    //            const sockaddr_in* sa4 = reinterpret_cast<const sockaddr_in*>(sa);
+    //            char ip4[INET_ADDRSTRLEN];
+    //            inet_ntop(AF_INET, &(sa4->sin_addr), ip4, INET_ADDRSTRLEN);
+
+    //            // Check if the current result matches the specified IPv4 address
+    //            if (strcmp(ip4, targetIPAddress) == 0) {
+    //                pCurrent->ai_next = nullptr;
+    //                *ppResult = pCurrent;
+    //                break;
+    //            }
+    //        }
+
+    //        pCurrent = pCurrent->ai_next;
+    //    }
+
+    //    pCurrent = *ppResult;
+
+    //    while (pCurrent != nullptr) {
+    //        sockaddr* sa = pCurrent->ai_addr;
+
+    //        // Log information about the address
+    //        Log("Address information:");
+    //        Log("  Family: " + std::to_string(pCurrent->ai_family));
+    //        Log("  Type: " + std::to_string(pCurrent->ai_socktype));
+    //        Log("  Protocol: " + std::to_string(pCurrent->ai_protocol));
+
+    //        // Log sockaddr information
+    //        LogSockAddr(sa);
+
+    //        // Move to the next element
+    //        pPrev = pCurrent;
+    //        pCurrent = pCurrent->ai_next;
+    //    }
+    //}
+
+
+    //return result;//EAI_NONAME;
 }
 
 INT WINAPI MyGetAddrInfoW(PCWSTR pNodeName, PCWSTR pServiceName, const ADDRINFOW* pHints, PADDRINFOW* ppResult)
@@ -2763,6 +2817,11 @@ public:
     HRESULT STDMETHODCALLTYPE CreateInstanceEnum(const BSTR strClass, long lFlags, IWbemContext* pCtx, IEnumWbemClassObject** ppEnum) {
         Log("CreateInstanceEnum");
         HRESULT hr = m_decorated->CreateInstanceEnum(strClass, lFlags, pCtx, ppEnum);
+        
+        std::stringstream logMessage;
+        logMessage << "Result: " << hr << std::endl;
+        Log(logMessage.str());
+
         if (SUCCEEDED(hr)) {
             Log("CreateInstanceEnum success");
             if (ppEnum != nullptr) {
@@ -2938,24 +2997,19 @@ HRESULT WINAPI MyCoCreateInstance(REFCLSID rclsid, LPUNKNOWN pUnkOuter, DWORD dw
 {
     Log("CoCreateInstance");
 
-    return REGDB_E_CLASSNOTREG;
-
     WCHAR guidString[40] = { 0 };
     StringFromGUID2(riid, guidString, 40);
 
-    /*std::wstringstream logMessage;
+    std::wstringstream logMessage;
     logMessage << L"CoCreateInstance called. Requested interface IID: " << guidString;
-    LogW(logMessage.str());*/
+    LogW(logMessage.str());
 
     HRESULT result = CoCreateInstance(rclsid, pUnkOuter, dwClsContext, riid, ppv);
 
-    if (SUCCEEDED(result)) {
-        //Log("Success");
-        if (riid == __uuidof(IWbemLocator)) {
-            //Log("Decorator");
-            IWbemLocator* original = static_cast<IWbemLocator*>(*ppv);
-            *ppv = new MyWbemLocatorDecorator(original);
-        }
+    if (SUCCEEDED(result) && riid == __uuidof(IWbemLocator)) {
+        Log("IWbemLocator");
+        IWbemLocator* original = static_cast<IWbemLocator*>(*ppv);
+        *ppv = new MyWbemLocatorDecorator(original);
     }
 
     return result;
@@ -2985,7 +3039,7 @@ HRESULT WINAPI MyCoCreateInstance(REFCLSID rclsid, LPUNKNOWN pUnkOuter, DWORD dw
 HRESULT WINAPI MyCoCreateInstanceEx(REFCLSID Clsid, IUnknown* punkOuter, DWORD dwClsCtx, COSERVERINFO* pServerInfo, DWORD dwCount, MULTI_QI* pResults)
 {
     Log("CoCreateInstanceEx");
-    return REGDB_E_CLASSNOTREG;
+
     return CoCreateInstanceEx(Clsid, punkOuter, dwClsCtx, pServerInfo, dwCount, pResults);
 }
 
@@ -3230,6 +3284,69 @@ HANDLE WINAPI MyCreateFileW(LPCWSTR lpFileName, DWORD dwDesiredAccess, DWORD dwS
     return CreateFileW(lpFileName, dwDesiredAccess, dwShareMode, lpSecurityAttributes, dwCreationDisposition, dwFlagsAndAttributes, hTemplateFile);
 }
 
+BOOL WINAPI MySetupDiEnumDeviceInterfaces(HDEVINFO DeviceInfoSet, PSP_DEVINFO_DATA DeviceInfoData, const GUID* InterfaceClassGuid, DWORD MemberIndex, PSP_DEVICE_INTERFACE_DATA DeviceInterfaceData)
+{
+    Log("SetupDiEnumDeviceInterfaces");
+
+    BOOL result = SetupDiEnumDeviceInterfaces(DeviceInfoSet, DeviceInfoData, InterfaceClassGuid, MemberIndex, DeviceInterfaceData);
+
+    if (result)
+    {
+        DWORD requiredSize = 0;
+        SetupDiGetDeviceInterfaceDetail(DeviceInfoSet, DeviceInterfaceData, NULL, 0, &requiredSize, NULL);
+
+        PSP_DEVICE_INTERFACE_DETAIL_DATA detailData = (PSP_DEVICE_INTERFACE_DETAIL_DATA)malloc(requiredSize);
+        if (detailData)
+        {
+            detailData->cbSize = sizeof(SP_DEVICE_INTERFACE_DETAIL_DATA);
+            if (SetupDiGetDeviceInterfaceDetail(DeviceInfoSet, DeviceInterfaceData, detailData, requiredSize, NULL, NULL))
+            {
+                Log("Device Path: ");
+                Log(detailData->DevicePath);
+            }
+            free(detailData);
+        }
+    }
+
+    return result;
+}
+
+HDEVINFO WINAPI MySetupDiGetClassDevsW(const GUID* ClassGuid, PCWSTR Enumerator, HWND hwndParent, DWORD Flags)
+{
+    Log("SetupDiGetClassDevsW");
+    // Buffer to hold the GUID string
+    wchar_t guidString[39]; // GUIDs are 38 characters plus null terminator
+
+    // Convert the GUID to a string (if it's not null)
+    if (ClassGuid != nullptr && StringFromGUID2(*ClassGuid, guidString, sizeof(guidString) / sizeof(wchar_t)))
+    {
+        // Log the GUID string
+        LogW(L"SetupDiGetClassDevsW - ClassGuid: " + std::wstring(guidString));
+    }
+    else
+    {
+        // Log a placeholder or error message if ClassGuid is null
+        LogW(L"SetupDiGetClassDevsW - ClassGuid: null or conversion failed");
+    }
+
+    // Call the original function
+    return SetupDiGetClassDevsW(ClassGuid, Enumerator, hwndParent, Flags);
+}
+
+BOOL WINAPI MyCreateProcessA(LPCSTR lpApplicationName, LPSTR lpCommandLine, LPSECURITY_ATTRIBUTES lpProcessAttributes, LPSECURITY_ATTRIBUTES lpThreadAttributes, BOOL bInheritHandles, DWORD dwCreationFlags, LPVOID lpEnvironment, LPCSTR lpCurrentDirectory, LPSTARTUPINFOA lpStartupInfo, LPPROCESS_INFORMATION lpProcessInformation)
+{
+    Log("CreateProcessA");
+    Log(lpCommandLine);
+    return CreateProcessA(lpApplicationName, lpCommandLine, lpProcessAttributes, lpThreadAttributes, bInheritHandles, dwCreationFlags, lpEnvironment, lpCurrentDirectory, lpStartupInfo, lpProcessInformation);
+}
+
+BOOL WINAPI MyCreateProcessW(LPCWSTR lpApplicationName, LPWSTR lpCommandLine, LPSECURITY_ATTRIBUTES lpProcessAttributes, LPSECURITY_ATTRIBUTES lpThreadAttributes, BOOL bInheritHandles, DWORD dwCreationFlags, LPVOID lpEnvironment, LPCWSTR lpCurrentDirectory, LPSTARTUPINFOW lpStartupInfo, LPPROCESS_INFORMATION lpProcessInformation)
+{
+    Log("CreateProcessW");
+    LogW(lpCommandLine);
+    return CreateProcessW(lpApplicationName, lpCommandLine, lpProcessAttributes, lpThreadAttributes, bInheritHandles, dwCreationFlags, lpEnvironment, lpCurrentDirectory, lpStartupInfo, lpProcessInformation);
+}
+
 
 std::string GenerateRandomString(size_t length) {
     const std::string characters = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
@@ -3242,7 +3359,563 @@ std::string GenerateRandomString(size_t length) {
     return randomString;
 }
 
-HOOKTEST_API void __stdcall NativeInjectionEntryPoint(REMOTE_ENTRY_INFO * remoteInfo)
+FILE* hooked_popen(const char* command, const char* type) {
+    // Do something before calling the original popen
+    // e.g., logging the command
+    printf("Hooked popen called with command: %s\n", command);
+
+    // Call the original popen function
+    return _popen(command, type);
+}
+
+void CreateBroadcastSocket()
+{
+    // Create a socket
+    broadcastSocket = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+    if (broadcastSocket == INVALID_SOCKET) {
+        printf("Error at socket(): %ld\n", WSAGetLastError());
+        WSACleanup();
+        return;
+    }
+
+    // Set SO_REUSEADDR option
+    int optval = 1;
+    if (setsockopt(broadcastSocket, SOL_SOCKET, SO_REUSEADDR, (char*)&optval, sizeof(int)) < 0) {
+        printf("setsockopt 1 failed: %d\n", WSAGetLastError());
+        closesocket(broadcastSocket);
+        WSACleanup();
+        return;
+    }
+
+    // Set SO_BROADCAST option
+    if (setsockopt(broadcastSocket, SOL_SOCKET, SO_BROADCAST, (char*)&optval, sizeof(int)) < 0) {
+        printf("setsockopt 2 failed: %d\n", WSAGetLastError());
+        closesocket(broadcastSocket);
+        WSACleanup();
+        return;
+    }
+
+    // Bind the socket
+    sockaddr_in broadcastAddr;
+    broadcastAddr.sin_family = AF_INET;
+    broadcastAddr.sin_port = htons(9999);
+    broadcastAddr.sin_addr.s_addr = htonl(INADDR_ANY);
+
+    if (bind(broadcastSocket, (struct sockaddr*)&broadcastAddr, sizeof(broadcastAddr)) == SOCKET_ERROR) {
+        printf("bind failed: %d\n", WSAGetLastError());
+        closesocket(broadcastSocket);
+        WSACleanup();
+        return;
+    }
+}
+
+int WINAPI MyWSAStartup(WORD wVersionRequested, LPWSADATA lpWSAData)
+{
+    Log("MyWSAStartup");
+    int result = WSAStartup(wVersionRequested, lpWSAData);
+
+    CreateBroadcastSocket();
+
+    return result;
+}
+
+int WINAPI MySetSocketOpt(SOCKET s, int level, int optname, const char* optval, int optlen)
+{
+    Log("MySetSocketOpt");
+
+
+    return 0;// setsockopt(s, level, optname, optval, optlen);
+}
+
+int WINAPI MyBind(SOCKET s, const struct sockaddr* name, int namelen)
+{
+    Log("MyBind");
+
+    /*if (broadcastSocket == INVALID_SOCKET) {
+        CreateBroadcastSocket();
+    }*/
+
+    // Ensure the address is IPv4 (AF_INET)
+    if (name->sa_family == AF_INET)
+    {
+        struct sockaddr_in modified_addr = {};
+        memcpy(&modified_addr, name, sizeof(modified_addr));
+
+        // Set IP to 0.0.0.0
+        //modified_addr.sin_addr.s_addr = htonl(INADDR_ANY);
+        modified_addr.sin_addr.s_addr = inet_addr(targetIPAddress);
+
+        // Check the original port
+        USHORT originalPort = ntohs(modified_addr.sin_port);
+
+        /*if (originalPort == 41455) {
+            int optval = 1;
+            setsockopt(s, SOL_SOCKET, SO_REUSEADDR, (char*)&optval, sizeof(optval));
+        }*/
+
+        // Specify the interface
+        struct in_addr target_interface;
+        target_interface.s_addr = inet_addr(targetIPAddress); // replace with your interface's IP address
+
+        // Set the IP_UNICAST_IF option
+        //if (setsockopt(s, IPPROTO_IP, IP_UNICAST_IF, (char*)&target_interface, sizeof(target_interface)) == SOCKET_ERROR) {
+        //    Log("setsockopt for IP_UNICAST_IF failed: ");//%ld\n", WSAGetLastError());
+        //    closesocket(s);
+        //    WSACleanup();
+        //    return 1;
+        //}
+
+        // Find the first available port starting from originalPort
+        for (USHORT port = originalPort; port < 65535; ++port)
+        {
+            modified_addr.sin_port = htons(port);
+            if (bind(s, (struct sockaddr*)&modified_addr, sizeof(modified_addr)) == 0)
+            {
+                // Successfully bound
+                return 0;
+            }
+        }
+
+        // If no ports are available, return error
+        return SOCKET_ERROR;
+    }
+
+    // For other cases, proceed as normal
+    return bind(s, name, namelen);
+}
+
+//int WINAPI MySendTo(SOCKET s, const char* buf, int len, int flags, const struct sockaddr* to, int tolen)
+//{
+//    Log("MySendTo");
+//
+//    // Log information about the sendto call
+//    std::stringstream logMessage;
+//    logMessage << "sendto intercepted!" << std::endl;
+//    logMessage << "Socket: " << s << std::endl;
+//    logMessage << "Length: " << len << std::endl;
+//    logMessage << "Flags: " << flags << std::endl;
+//
+//    // Log information about the destination address
+//    if (to != nullptr && tolen >= sizeof(sockaddr_in))
+//    {
+//        const sockaddr_in* addr = reinterpret_cast<const sockaddr_in*>(to);
+//
+//        char destAddrString[INET_ADDRSTRLEN];
+//        if (inet_ntop(AF_INET, &(addr->sin_addr), destAddrString, INET_ADDRSTRLEN) != nullptr)
+//        {
+//            logMessage << "MySendTo Address: " << destAddrString << std::endl;
+//            logMessage << "MySendTo Port: " << ntohs(addr->sin_port) << std::endl;
+//        }
+//        else
+//        {
+//            logMessage << "inet_ntop error " << std::endl;
+//        }
+//    }
+//
+//    Log(logMessage.str());
+//
+//    //printRawBytes(buf, len);
+//    return sendto(s, buf, len, flags, to, tolen);
+//
+//    //// Ensure the address is IPv4 (AF_INET)
+//    //if (to->sa_family == AF_INET)
+//    //{
+//    //    sockaddr_in* sockaddrIPv4 = (sockaddr_in*)to;
+//
+//    //    // Check if the destination is a broadcast address
+//    //    if (sockaddrIPv4->sin_addr.S_un.S_addr == INADDR_BROADCAST)
+//    //    {
+//    //        // Send the packet multiple times
+//    //        for (int i = 0; i < 8; i++)
+//    //        {
+//    //            // Update the destination port
+//    //            sockaddrIPv4->sin_port = htons(ntohs(sockaddrIPv4->sin_port) + (2 * i));
+//
+//    //            // Send the packet
+//    //            int result = sendto(s, buf, len, flags, (struct sockaddr*)sockaddrIPv4, tolen);
+//    //            if (result == SOCKET_ERROR)
+//    //            {
+//    //                // Handle error
+//    //                int error = WSAGetLastError();
+//    //                std::stringstream logMessage;
+//    //                logMessage << "sendto failed with error: " << error << std::endl;
+//    //                Log(logMessage.str());
+//    //            }
+//    //        }
+//
+//    //        // Return the number of bytes sent
+//    //        return len;
+//    //    }
+//    //}
+//
+//    //// If not a broadcast address, call the original sendto function
+//    //return sendto(s, buf, len, flags, to, tolen);
+//}
+//
+//int WINAPI MyRecvFrom(SOCKET s, char* buf, int len, int flags, struct sockaddr* from, int* fromlen)
+//{
+//    // Convert the 'from' address to a string
+//    char ipString[INET_ADDRSTRLEN];
+//    struct sockaddr_in* from_in = (struct sockaddr_in*)from;
+//    inet_ntop(AF_INET, &(from_in->sin_addr), ipString, INET_ADDRSTRLEN);
+//
+//    // Check if the string starts with "192.168."
+//    /*if (strncmp(ipString, "192.168.", 8) != 0) {
+//        return SOCKET_ERROR;
+//    }*/
+//
+//
+//    std::stringstream logMessage;
+//
+//    int result = recvfrom(s, buf, len, flags, from, fromlen);
+//
+//    sockaddr_in* localAddress = reinterpret_cast<sockaddr_in*>(from);
+//
+//    /*if (strcmp(inet_ntoa(localAddress->sin_addr), targetIPAddress) == 0)
+//        return WSAETIMEDOUT;*/
+//
+//    logMessage << "MyRecvFrom Local Address: " << inet_ntoa(localAddress->sin_addr) << std::endl;
+//    logMessage << "MyRecvFrom Local Port: " << ntohs(localAddress->sin_port) << std::endl;
+//    logMessage << "MyRecvFrom Family: " << ntohs(localAddress->sin_family) << std::endl;
+//    logMessage << "MyRecvFrom: socket - " << s << std::endl;
+//   /* printRawBytes(buf, len);
+//    logMessage << "MyRecvFrom: Length - " << len << std::endl;
+//    logMessage << "MyRecvFrom: Flags - " << flags << std::endl;
+//    logMessage << "MyRecvFrom: From length - " << fromlen << std::endl;*/
+//
+//    Log(logMessage.str());
+//
+//    return result;
+//}
+
+// Maximum length of an IP address string (including null terminator)
+//const int MAX_IP_ADDRESS_LENGTH = 16;
+const int MAX_PROCESS_ID_LENGTH = 10;
+
+// Padding character
+const char PADDING_CHAR = '#';
+
+// Map of real IP addresses to virtual IP addresses
+std::map<DWORD, std::pair<std::string, std::string>> pidAddressMap;
+
+// Hooked sendto function
+//int WINAPI MySendTo(SOCKET s, const char* buf, int len, int flags, const struct sockaddr_in* to, int tolen)
+//{
+//    std::stringstream logMessage;
+//    logMessage << "MySendTo Address: " << inet_ntoa(reinterpret_cast<const sockaddr_in*>(to)->sin_addr);
+//    Log(logMessage.str());
+//
+//    // Pad the targetIPAddress to the maximum length
+//    std::string paddedTargetIPAddress(targetIPAddress);
+//    paddedTargetIPAddress.resize(MAX_IP_ADDRESS_LENGTH - 1, PADDING_CHAR);
+//
+//    // Prepend the padded targetIPAddress to the buffer
+//    std::string modifiedBuf = paddedTargetIPAddress + std::string(buf, buf + len);
+//
+//   // return sendto(s, modifiedBuf.c_str(), modifiedBuf.size(), flags, (struct sockaddr*)to, tolen);
+//
+//    // Create a copy of the to address
+//    struct sockaddr_in toCopy = *to;
+//
+//    // Convert the to address to a string
+//    char* toAddress = inet_ntoa(toCopy.sin_addr);
+//
+//    // Search the ipAddressMap for a value that matches the to address
+//    for (const auto& pair : ipAddressMap)
+//    {
+//        if (pair.second == toAddress)
+//        {
+//            // If a match is found, replace the to address with the corresponding key
+//            toCopy.sin_addr.s_addr = inet_addr(pair.first.c_str());
+//            break;
+//        }
+//    }
+//
+//    // Call the original sendto function with the possibly modified to address
+//    return sendto(s, modifiedBuf.c_str(), modifiedBuf.size(), flags, (struct sockaddr*)&toCopy, tolen);
+//}
+
+// Hooked sendto function
+int WINAPI MySendTo(SOCKET s, const char* buf, int len, int flags, const struct sockaddr_in* to, int tolen)
+{
+    std::stringstream logMessage;
+    logMessage << "MySendTo Virtual Address: " << inet_ntoa(reinterpret_cast<const sockaddr_in*>(to)->sin_addr);
+    Log(logMessage.str());
+
+    // Get the current process ID
+    DWORD processId = GetCurrentProcessId();
+
+    // Convert the process ID to a string
+    std::string processIdStr = std::to_string(processId);
+
+    // Pad the processIdStr to the maximum length
+    processIdStr.resize(MAX_PROCESS_ID_LENGTH - 1, PADDING_CHAR);
+
+    // Prepend the padded processIdStr to the buffer
+    std::string modifiedBuf = processIdStr + std::string(buf, buf + len);
+
+    // Create a copy of the to address
+    struct sockaddr_in toCopy = *to;
+
+    // Convert the to address to a string
+    char* toAddress = inet_ntoa(toCopy.sin_addr);
+
+    // Search the ipAddressMap for a value that matches the to address
+    for (const auto& pair : pidAddressMap)
+    {
+        if (pair.second.second == toAddress)
+        {
+            // If a match is found, replace the to address with the corresponding key
+            toCopy.sin_addr.s_addr = inet_addr(pair.second.first.c_str());
+
+            std::stringstream logMessage;
+            logMessage << "MySendTo Real Address: " << inet_ntoa(reinterpret_cast<const sockaddr_in*>(to)->sin_addr);
+            Log(logMessage.str());
+            break;
+        }
+    }
+
+    // Call the original sendto function with the possibly modified to address
+    return sendto(s, modifiedBuf.c_str(), modifiedBuf.size(), flags, (struct sockaddr*)&toCopy, tolen);
+}
+
+
+// Function to generate a random IP address
+std::string GenerateRandomIPAddress()
+{
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::uniform_int_distribution<> dis(1, 254); // Avoid 0 and 255 in each octet
+
+    std::stringstream ss;
+    ss << dis(gen) << "." << dis(gen) << "." << dis(gen) << "." << dis(gen);
+
+    return ss.str();
+}
+
+// Hooked recvfrom function
+//int WINAPI MyRecvFrom(SOCKET s, char* buf, int len, int flags, struct sockaddr_in* from, int* fromlen)
+//{
+//    // Create a buffer to hold the data received from recvfrom
+//    char* recvBuf = new char[len + MAX_IP_ADDRESS_LENGTH];
+//
+//    // Call the original recvfrom function
+//    int result = recvfrom(s, recvBuf, len + MAX_IP_ADDRESS_LENGTH - 1, flags, (struct sockaddr*)from, fromlen);
+//
+//    /*std::stringstream logMessage;
+//    logMessage << "MyRecvFrom Address: " << inet_ntoa(from->sin_addr);
+//    Log(logMessage.str());*/
+//
+//    // Check if the call was successful
+//    if (result > 0)
+//    {
+//        // Extract the real IP address from the start of the buffer
+//        std::string realIPAddress(recvBuf, recvBuf + MAX_IP_ADDRESS_LENGTH - 1);
+//
+//        // Remove the padding from the real IP address
+//        realIPAddress.erase(realIPAddress.find(PADDING_CHAR));
+//
+//        // Check if the real IP address is in the map
+//        if (ipAddressMap.find(realIPAddress) == ipAddressMap.end())
+//        {
+//            // If it's not, generate a new virtual IP address and add it to the map
+//            std::string virtualIPAddress = GenerateRandomIPAddress();
+//            ipAddressMap[realIPAddress] = virtualIPAddress;
+//        }
+//
+//        // Get the virtual IP address from the map
+//        std::string virtualIPAddress = ipAddressMap[realIPAddress];
+//
+//        Log("MyRecvFrom Address: " + realIPAddress);
+//        //Log("MyRecvFrom virtualIPAddress: " + virtualIPAddress);
+//
+//        // Assign the virtual IP address to the returned from addr field
+//        from->sin_addr.s_addr = inet_addr(realIPAddress.c_str());
+//
+//        // Remove the real IP address from the start of the buffer
+//        memmove(buf, recvBuf + MAX_IP_ADDRESS_LENGTH - 1, result - (MAX_IP_ADDRESS_LENGTH - 1));
+//
+//        // Update the result to reflect the new length of the buffer
+//        result -= (MAX_IP_ADDRESS_LENGTH - 1);
+//    }
+//
+//    // Clean up the recvBuf
+//    delete[] recvBuf;
+//
+//    // Return the result
+//    return result;
+//}
+
+// Hooked recvfrom function
+int WINAPI MyRecvFrom(SOCKET s, char* buf, int len, int flags, struct sockaddr_in* from, int* fromlen)
+{
+    // Create a buffer to hold the data received from recvfrom
+    char* recvBuf = new char[len + MAX_PROCESS_ID_LENGTH];
+
+    // Call the original recvfrom function
+    int result = recvfrom(s, recvBuf, len + MAX_PROCESS_ID_LENGTH - 1, flags, (struct sockaddr*)from, fromlen);
+
+    // Check if the call was successful
+    if (result > 0)
+    {
+        std::string realIPAddress = inet_ntoa(reinterpret_cast<sockaddr_in*>(from)->sin_addr);
+
+        // Extract the process ID from the start of the buffer
+        std::string processIdStr(recvBuf, recvBuf + MAX_PROCESS_ID_LENGTH - 1);
+
+        // Remove the padding from the process ID
+        processIdStr.erase(processIdStr.find(PADDING_CHAR));
+
+        // Convert the process ID string to an integer
+        DWORD processId = std::stoul(processIdStr);
+
+        // Check if the process ID is in the map
+        if (pidAddressMap.find(processId) == pidAddressMap.end())
+        {
+            // If it's not, generate a new virtual IP address and add it to the map
+            std::string virtualIPAddress = GenerateRandomIPAddress();
+            pidAddressMap[processId].first = realIPAddress;
+            pidAddressMap[processId].second = virtualIPAddress;
+        }
+
+        // Get the virtual IP address from the map
+        std::string virtualIPAddress = pidAddressMap[processId].second;
+
+        Log("MyRecvFrom Process ID: " + processIdStr);
+        Log("MyRecvFrom realIPAddress: " + realIPAddress);
+        Log("MyRecvFrom virtualIPAddress: " + virtualIPAddress);
+
+        // Assign the virtual IP address to the returned from addr field
+        from->sin_addr.s_addr = inet_addr(virtualIPAddress.c_str());
+
+        // Remove the process ID from the start of the buffer
+        memmove(buf, recvBuf + MAX_PROCESS_ID_LENGTH - 1, result - (MAX_PROCESS_ID_LENGTH - 1));
+
+        // Update the result to reflect the new length of the buffer
+        result -= (MAX_PROCESS_ID_LENGTH - 1);
+    }
+
+    // Clean up the recvBuf
+    delete[] recvBuf;
+
+    // Return the result
+    return result;
+}
+
+
+//int WSAAPI MyWSAIoctl(SOCKET s, DWORD dwIoControlCode, LPVOID lpvInBuffer, DWORD cbInBuffer, LPVOID lpvOutBuffer, DWORD cbOutBuffer, LPDWORD lpcbBytesReturned, LPWSAOVERLAPPED lpOverlapped, LPWSAOVERLAPPED_COMPLETION_ROUTINE lpCompletionRoutine)
+//{
+//    // Call the original function
+//    int result = WSAIoctl(s, dwIoControlCode, lpvInBuffer, cbInBuffer, lpvOutBuffer, cbOutBuffer, lpcbBytesReturned, lpOverlapped, lpCompletionRoutine);
+//
+//    // If the control code is SIO_ROUTING_INTERFACE_QUERY, overwrite the output buffer address string
+//    if (dwIoControlCode == SIO_ROUTING_INTERFACE_QUERY && result == 0)
+//    {
+//        // The output buffer should be a sockaddr structure
+//        sockaddr_in* addr = static_cast<sockaddr_in*>(lpvOutBuffer);
+//
+//        // Generate a random IP address string
+//        if (randomIPAddress.empty())
+//        {
+//            std::random_device rd;
+//            std::mt19937 gen(rd());
+//            std::uniform_int_distribution<> dis(0, 99);
+//            randomIPAddress = "192.168.0." + std::to_string(dis(gen));
+//        }
+//
+//        // Overwrite the address with the random IP address
+//        inet_pton(AF_INET, randomIPAddress.c_str(), &(addr->sin_addr));
+//
+//        // Convert the new address to a string for logging
+//        char str[INET_ADDRSTRLEN];
+//        inet_ntop(AF_INET, &(addr->sin_addr), str, INET_ADDRSTRLEN);
+//
+//        // Log the new address
+//        Log("SIO_ROUTING_INTERFACE_QUERY overwritten with address: " + std::string(str));
+//    }
+//
+//    return result;
+//}
+
+int WSAAPI MyWSAIoctl(SOCKET s, DWORD dwIoControlCode, LPVOID lpvInBuffer, DWORD cbInBuffer, LPVOID lpvOutBuffer, DWORD cbOutBuffer, LPDWORD lpcbBytesReturned, LPWSAOVERLAPPED lpOverlapped, LPWSAOVERLAPPED_COMPLETION_ROUTINE lpCompletionRoutine)
+{
+    // Call the original function
+    int result = WSAIoctl(s, dwIoControlCode, lpvInBuffer, cbInBuffer, lpvOutBuffer, cbOutBuffer, lpcbBytesReturned, lpOverlapped, lpCompletionRoutine);
+
+    if (dwIoControlCode == SIO_GET_INTERFACE_LIST && result == 0)
+    {
+        // Cast the output buffer to INTERFACE_INFO structure
+        INTERFACE_INFO* pInterfaceInfo = (INTERFACE_INFO*)lpvOutBuffer;
+
+        // Clear the structure
+        memset(pInterfaceInfo, 0, sizeof(INTERFACE_INFO));
+
+        // Set the IP address to targetIPAddress
+        pInterfaceInfo->iiAddress.AddressIn.sin_addr.s_addr = inet_addr(targetIPAddress);
+
+        // Set the number of bytes returned
+        *lpcbBytesReturned = sizeof(INTERFACE_INFO);
+
+        Log("SIO_GET_INTERFACE_LIST overwritten with address: " + std::string(targetIPAddress));
+    }
+
+    return result;
+}
+
+bool GetBestLocalIPAddress()
+{
+    // Allocate memory for the adapter info structures
+    ULONG ulOutBufLen = sizeof(IP_ADAPTER_INFO);
+    PIP_ADAPTER_INFO pAdapterInfo = (IP_ADAPTER_INFO*)malloc(ulOutBufLen);
+
+    // Call GetAdaptersInfo to fill the pAdapterInfo structure
+    DWORD dwRetVal = GetAdaptersInfo(pAdapterInfo, &ulOutBufLen);
+
+    // If the buffer was too small, allocate a larger one and call GetAdaptersInfo again
+    if (dwRetVal == ERROR_BUFFER_OVERFLOW)
+    {
+        free(pAdapterInfo);
+        pAdapterInfo = (IP_ADAPTER_INFO*)malloc(ulOutBufLen);
+        dwRetVal = GetAdaptersInfo(pAdapterInfo, &ulOutBufLen);
+    }
+
+    // If the call was successful, iterate through the list of adapters
+    if (dwRetVal == NO_ERROR)
+    {
+        PIP_ADAPTER_INFO pAdapter = pAdapterInfo;
+        while (pAdapter)
+        {
+            // Iterate through the list of IP addresses for this adapter
+            IP_ADDR_STRING* pIpAddressList = &pAdapter->IpAddressList;
+            while (pIpAddressList)
+            {
+                // Check if the IP address starts with "192"
+                if (strncmp(pIpAddressList->IpAddress.String, "192", 3) == 0)
+                {
+                    // If it does, return it
+                    targetIPAddress = new char[strlen(pIpAddressList->IpAddress.String) + 1]; // +1 for the null-terminator
+                    strcpy(targetIPAddress, pIpAddressList->IpAddress.String);
+
+                    free(pAdapterInfo);
+                    return true;
+                }
+
+                // Move to the next IP address
+                pIpAddressList = pIpAddressList->Next;
+            }
+
+            // Move to the next adapter
+            pAdapter = pAdapter->Next;
+        }
+    }
+
+    // If no suitable IP address was found, return an empty string
+    free(pAdapterInfo);
+    return false;
+}
+
+
+VIRTUALNET_API void __stdcall NativeInjectionEntryPoint(REMOTE_ENTRY_INFO* remoteInfo)
 {
     ZeroMemory(tempString, sizeof(tempString));
     ZeroMemory(tempStringW, sizeof(tempStringW));
@@ -3256,7 +3929,7 @@ HOOKTEST_API void __stdcall NativeInjectionEntryPoint(REMOTE_ENTRY_INFO * remote
         DWORD dwWritten = 0;
         StringCchPrintf(tempString, sizeof(tempString) / sizeof(TCHAR), "(%d): jailbreakhook.dll\r\n", GetCurrentProcessId());
         SetFilePointer(hLogFile, 0, 0, FILE_END);
-        if (!WriteFile(hLogFile, tempString, (DWORD)(_tcslen(tempString)*sizeof(TCHAR)), &dwWritten, NULL))
+        if (!WriteFile(hLogFile, tempString, (DWORD)(_tcslen(tempString) * sizeof(TCHAR)), &dwWritten, NULL))
         {
             // If we can't write our first line then don't bother trying to log later.
             CloseHandle(hLogFile);
@@ -3264,50 +3937,103 @@ HOOKTEST_API void __stdcall NativeInjectionEntryPoint(REMOTE_ENTRY_INFO * remote
         }
     }
 
-
-    // Initialize random seed
-    srand(static_cast<unsigned int>(time(nullptr)));
-
-    // Generate random values
-    std::string newComputerName = GenerateRandomString(10); // Example length 10
-    std::string newUserName = GenerateRandomString(8); // Example length 8
-
-    // Set environment variables
-    if (!SetEnvironmentVariable("COMPUTERNAME", newComputerName.c_str())) {
-        // Handle error
-        DWORD dwError = GetLastError();
-    }
-
-    if (!SetEnvironmentVariable("USERNAME", newUserName.c_str())) {
-        // Handle error
-        DWORD dwError = GetLastError();
-    }
-
-    // Rest of your code
-
-
-    ////InstallHook("user32", "GetForegroundWindow", GetForegroundWindow_Hook);
-    ////InstallHook("user32", "WindowFromPoint", WindowFromPoint_Hook);
-    ////InstallHook("user32", "GetActiveWindow", GetActiveWindow_Hook);
-    //InstallHook("user32", "IsWindowEnabled", IsWindowEnabled_Hook);
-    ////InstallHook("user32", "GetFocus", GetFocus_Hook);
-    ////InstallHook("user32", "GetCapture", GetCapture_Hook);
-    //InstallHook("user32", "SetCapture", SetCapture_Hook);
-    //InstallHook("user32", "ReleaseCapture", ReleaseCapture_Hook);
-    //InstallHook("user32", "SetActiveWindow", SetActiveWindow_Hook);
-    //InstallHook("user32", "SetFocus", SetFocus_Hook);
-    //
-    //InstallHook("user32", "SetForegroundWindow", SetForegroundWindow_Hook);
-
-
-    targetIPAddress = getenv("TargetIPAddress");
-    if (targetIPAddress != nullptr) {
+    //targetIPAddress = getenv("TargetIPAddress");
+    GetBestLocalIPAddress();
+    if (targetIPAddress[0] != '\0') {
         Log("TargetIPAddress: ");
         Log(targetIPAddress);
+        pidAddressMap[GetCurrentProcessId()] = std::make_pair(targetIPAddress, targetIPAddress);
     }
     else {
         Log("TargetIPAddress not found");
     }
+
+    //InstallHook("ws2_32.dll", "WSAStartup", MyWSAStartup);
+    //InstallHook("ws2_32.dll", "setsockopt", MySetSocketOpt);
+    InstallHook("ws2_32.dll", "bind", MyBind);
+    InstallHook("ws2_32.dll", "WSAIoctl", MyWSAIoctl);
+    InstallHook("ws2_32.dll", "sendto", MySendTo);
+    InstallHook("ws2_32.dll", "recvfrom", MyRecvFrom);
+
+
+    //char buffer[1024];
+    //struct sockaddr_in from;
+    //int fromlen = sizeof(from);
+
+    //while (true) // Loop indefinitely
+    //{
+    //    if (broadcastSocket == INVALID_SOCKET) {
+    //        continue;
+    //    }
+
+    //    std::stringstream logMessage;
+
+    //    memset(buffer, 0, sizeof(buffer)); // Clear the buffer
+
+    //    // Receive data
+    //    int bytesReceived = recvfrom(broadcastSocket, buffer, sizeof(buffer), 0, (struct sockaddr*)&from, &fromlen);
+    //    if (bytesReceived == SOCKET_ERROR)
+    //    {
+    //        // Handle error
+    //        int error = WSAGetLastError();
+    //        logMessage << "recvfrom failed with error: " << error << std::endl;
+    //    }
+    //    else
+    //    {
+    //        // Process received data
+    //        logMessage << "MyRecvFrom Local Address: " << inet_ntoa(from.sin_addr) << std::endl;
+    //        logMessage << "MyRecvFrom Local Port: " << ntohs(from.sin_port) << std::endl;
+    //        logMessage << "Received data: " << buffer << std::endl;
+    //    }
+
+    //    Log(logMessage.str());
+    //}
+
+
+    //// Initialize random seed
+    //srand(static_cast<unsigned int>(time(nullptr)));
+
+    //// Generate random values
+    //std::string newComputerName = GenerateRandomString(10); // Example length 10
+    //std::string newUserName = GenerateRandomString(8); // Example length 8
+
+    //// Set environment variables
+    //if (!SetEnvironmentVariable("COMPUTERNAME", newComputerName.c_str())) {
+    //    // Handle error
+    //    DWORD dwError = GetLastError();
+    //}
+
+    //if (!SetEnvironmentVariable("USERNAME", newUserName.c_str())) {
+    //    // Handle error
+    //    DWORD dwError = GetLastError();
+    //}
+
+    //// Rest of your code
+
+
+    //////InstallHook("user32", "GetForegroundWindow", GetForegroundWindow_Hook);
+    //////InstallHook("user32", "WindowFromPoint", WindowFromPoint_Hook);
+    //////InstallHook("user32", "GetActiveWindow", GetActiveWindow_Hook);
+    ////InstallHook("user32", "IsWindowEnabled", IsWindowEnabled_Hook);
+    //////InstallHook("user32", "GetFocus", GetFocus_Hook);
+    //////InstallHook("user32", "GetCapture", GetCapture_Hook);
+    ////InstallHook("user32", "SetCapture", SetCapture_Hook);
+    ////InstallHook("user32", "ReleaseCapture", ReleaseCapture_Hook);
+    ////InstallHook("user32", "SetActiveWindow", SetActiveWindow_Hook);
+    ////InstallHook("user32", "SetFocus", SetFocus_Hook);
+    ////
+    ////InstallHook("user32", "SetForegroundWindow", SetForegroundWindow_Hook);
+
+
+    //// Generate random bytes
+    //std::random_device rd;
+    //std::mt19937 gen(rd());
+    //std::uniform_int_distribution<> dis(0, 255);
+    //for (int i = 0; i < 1; ++i) {
+    //    idBytes[i] = static_cast<unsigned char>(dis(gen));
+    //}
+
+
     //
     //
     //// Initialize random seed
@@ -3333,6 +4059,11 @@ HOOKTEST_API void __stdcall NativeInjectionEntryPoint(REMOTE_ENTRY_INFO * remote
     //InstallHook("ole32.dll", "CoCreateInstanceEx", MyCoCreateInstanceEx);
 
     //InstallHook("kernel32", "LoadLibraryA", HookedLoadLibraryA);
+    //InstallHook("kernel32", "CreateProcessA", MyCreateProcessA);
+    //InstallHook("kernel32", "CreateProcessW", MyCreateProcessW);
+
+    //InstallHook("setupapi.dll", "SetupDiEnumDeviceInterfaces", MySetupDiEnumDeviceInterfaces);
+    //InstallHook("setupapi.dll", "SetupDiGetClassDevsW", MySetupDiGetClassDevsW);
 
     //InstallHook("Iphlpapi", "GetIpNetEntry2", Hooked_GetIpNetEntry2);
     //InstallHook("Iphlpapi", "GetIfEntry2", Hooked_GetIfEntry2);
@@ -3373,24 +4104,31 @@ HOOKTEST_API void __stdcall NativeInjectionEntryPoint(REMOTE_ENTRY_INFO * remote
     //InstallHook("Iphlpapi", "GetTcpTable", MyGetTcpTable);
     //InstallHook("Iphlpapi", "GetTcpTable2", MyGetTcpTable2);
 
+    // Generate a random IP address string
+    /*std::random_device rd2;
+    std::mt19937 gen2(rd2());
+    std::uniform_int_distribution<> dis2(0, 99);
+    std::string randomIPAddress = "192.168.0." + std::to_string(dis2(gen2));*/
+
     ////
     ////InstallHook("ws2_32.dll", "WSAStartup", MyWSAStartup);
-    ////InstallHook("ws2_32.dll", "socket", MySocket);
-    InstallHook("ws2_32.dll", "bind", MyBind); //
-    InstallHook("ws2_32.dll", "getsockname", MyGetSockName);
+    //InstallHook("ws2_32.dll", "socket", MySocket);
+    //InstallHook("ws2_32.dll", "bind", MyBind); //
+    //InstallHook("ws2_32.dll", "WSAIoctl", MyWSAIoctl);
+    //InstallHook("ws2_32.dll", "getsockname", MyGetSockName);
     //InstallHook("ws2_32.dll", "sendto", MySendTo); //
     //InstallHook("ws2_32.dll", "recvfrom", MyRecvFrom); //
     //InstallHook("ws2_32.dll", "closesocket", MyCloseSocket);
     //InstallHook("ws2_32.dll", "WSACleanup", MyWSACleanup);
     //
-    InstallHook("ws2_32.dll", "gethostname", MyGetHostName); //
-    InstallHook("ws2_32.dll", "gethostbyname", MyGetHostByName); //
+    //InstallHook("ws2_32.dll", "gethostname", MyGetHostName); //
+    //InstallHook("ws2_32.dll", "gethostbyname", MyGetHostByName); //
     ////////InstallHook("ws2_32.dll", "gethostbyaddr", MyGetHostByAddr);
     ////InstallHook("ws2_32.dll", "getnameinfo", MyGetNameInfo);
     /////////*InstallHook("ws2_32.dll", "GetNameInfo", MyGetNameInfo2);
     ////////InstallHook("ws2_32.dll", "GetNameInfoA", MyGetNameInfoA);*/
     ////InstallHook("ws2_32.dll", "GetNameInfoW", MyGetNameInfoW);
-    InstallHook("ws2_32.dll", "WSAEnumNetworkEvents", MyWSAEnumNetworkEvents);
+    //InstallHook("ws2_32.dll", "WSAEnumNetworkEvents", MyWSAEnumNetworkEvents);
     ////////InstallHook("ws2_32.dll", "WSAConnect", MyWSAConnect);
     ////////InstallHook("ws2_32.dll", "WSAConnectByList", MyWSAConnectByList);
     ////////InstallHook("ws2_32.dll", "WSAConnectByNameA", MyWSAConnectByNameA);
@@ -3513,8 +4251,5 @@ HOOKTEST_API void __stdcall NativeInjectionEntryPoint(REMOTE_ENTRY_INFO * remote
 
     //// Set a hardware breakpoint
     //SetHardwareBreakpoint(instructionAddress);
-
-
-    Log("Installed");
 
 }

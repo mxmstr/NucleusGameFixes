@@ -6,10 +6,15 @@
 #include <vector>
 
 #ifdef _M_X64
-#define PROGNAME "R6FixInjector64"
+#define PROGNAME "AutoRebindInjector64"
 #else
-#define PROGNAME "R6FixInjector32"
+#define PROGNAME "AutoRebindInjector32"
 #endif
+
+// Helper function to convert string to DWORD (process ID)
+DWORD StringToDWORD(const TCHAR* str) {
+    return static_cast<DWORD>(_ttoi(str));
+}
 
 int _tmain(int argc, _TCHAR* argv[])
 {
@@ -33,7 +38,7 @@ int _tmain(int argc, _TCHAR* argv[])
     ZeroMemory(&pi, sizeof(pi));
 
     // See if there is a log file which indicates we should log our progress.
-    hLogFile = CreateFile("r6fix.log", GENERIC_WRITE, FILE_SHARE_WRITE | FILE_SHARE_READ,
+    hLogFile = CreateFile("injector.log", GENERIC_WRITE, FILE_SHARE_WRITE | FILE_SHARE_READ,
                           NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
 
     // Using argv[] and GetCommandLine so I can steal the correctly quoted command line from GetCommandLine
@@ -69,7 +74,7 @@ int _tmain(int argc, _TCHAR* argv[])
         SetFilePointer(hLogFile, 0, 0, FILE_END);
         if (!WriteFile(hLogFile, tempString, (DWORD)(_tcslen(tempString)*sizeof(TCHAR)), &dwWritten, NULL))
         {
-            printf("Failed to write to jailbreak.log no logging will be performed. (%d)\n", GetLastError());
+            printf("Failed to write to injector.log no logging will be performed. (%d)\n", GetLastError());
             CloseHandle(hLogFile);
             hLogFile = INVALID_HANDLE_VALUE;
         }
@@ -82,7 +87,41 @@ int _tmain(int argc, _TCHAR* argv[])
         WriteFile(hLogFile, tempString, (DWORD)(_tcslen(tempString)*sizeof(TCHAR)), &dwWritten, NULL);
     }
 
-    bResult = CreateProcessA(NULL,
+    // Check for command line option for runtime injection
+    bool runtimeInjection = false;
+    DWORD targetProcessId = 0;
+    if (argc > 1) {
+        if (_tcscmp(argv[1], _T("-runtime")) == 0) {
+            runtimeInjection = true;
+            if (argc < 3) {
+                printf("Process ID not specified for runtime injection.\n");
+                return -1;
+            }
+            targetProcessId = StringToDWORD(argv[2]);
+        }
+    }
+
+    // Modify injection logic based on the chosen mode
+    if (runtimeInjection) {
+        // Runtime injection logic
+        nt = RhInjectLibrary(targetProcessId, 0, EASYHOOK_INJECT_DEFAULT,
+            L"AutoRebind32.dll",
+            L"AutoRebind64.dll", NULL, 0);
+        if (nt != 0) {
+            printf("RhInjectLibrary failed with error code = %d\n", nt);
+            ret = -1;
+        }
+
+        if (pCommandLine)
+            free(pCommandLine);
+
+        if (hLogFile != INVALID_HANDLE_VALUE)
+            CloseHandle(hLogFile);
+
+        return ret;
+    }
+
+    bResult = CreateProcess(NULL,
         pCommandLine, NULL, NULL, FALSE, CREATE_SUSPENDED,
         NULL, NULL, &si, &pi);
 
