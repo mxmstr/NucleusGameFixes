@@ -7,12 +7,12 @@
 // JAILBREAKHOOK_API functions as being imported from a DLL, whereas this DLL sees symbols
 // defined with this macro as being exported.
 #ifdef JAILBREAKHOOK_EXPORTS
-#define OR2FIX_API __declspec(dllexport)
+#define BCFIX_API __declspec(dllexport)
 #else
 #define NFSSFIX_API __declspec(dllimport)
 #endif
 
-extern "C" OR2FIX_API void __stdcall NativeInjectionEntryPoint(REMOTE_ENTRY_INFO * remoteInfo);
+extern "C" BCFIX_API void __stdcall NativeInjectionEntryPoint(REMOTE_ENTRY_INFO * remoteInfo);
 
 // Function pointer definitions
 typedef BOOL(WINAPI *PFNCRYPTGETKEYPARAM)(HCRYPTKEY, DWORD, BYTE*, DWORD*, DWORD);

@@ -11,23 +11,6 @@
 #define PROGNAME "jailbreak32"
 #endif
 
-std::string concatenateStringAndTChar(const std::string& str, const TCHAR* tcharStr) {
-#ifdef UNICODE
-    // Convert TCHAR* (wchar_t*) to std::wstring
-    std::wstring wideTCharStr(tcharStr);
-
-    // Convert std::wstring to std::string
-    std::wstring_convert<std::codecvt_utf8<wchar_t>, wchar_t> converter;
-    std::string convertedTCharStr = converter.to_bytes(wideTCharStr);
-
-    // Concatenate
-    return str + convertedTCharStr;
-#else
-    // Direct concatenation (TCHAR* is char*)
-    return str + tcharStr;
-#endif
-}
-
 int _tmain(int argc, _TCHAR* argv[])
 {
     int ret = 0;
@@ -83,6 +66,9 @@ int _tmain(int argc, _TCHAR* argv[])
     // it does show up in GetCommandLine.
     if (pPos[-1] == _T('\"') || pPos[-1] == _T('\''))
         pPos--;
+
+    // Copy the rest of the command line, including all arguments
+    pCommandLine = _tcsdup(pPos);
 
     len = _tcslen(pPos);
     pCommandLine = (TCHAR*)calloc(len + 1, sizeof(TCHAR));

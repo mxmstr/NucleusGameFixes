@@ -156,7 +156,7 @@ int WSAAPI MyWSAIoctl(SOCKET s, DWORD dwIoControlCode, LPVOID lpvInBuffer, DWORD
     return result;
 }
 
-OR2FIX_API void __stdcall NativeInjectionEntryPoint(REMOTE_ENTRY_INFO * remoteInfo)
+BCFIX_API void __stdcall NativeInjectionEntryPoint(REMOTE_ENTRY_INFO * remoteInfo)
 {
     ZeroMemory(tempString, sizeof(tempString));
     ZeroMemory(tempStringW, sizeof(tempStringW));
