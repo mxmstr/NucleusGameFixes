@@ -16,10 +16,7 @@ int _tmain(int argc, _TCHAR* argv[])
     int ret = 0;
     STARTUPINFO si;
     PROCESS_INFORMATION pi;
-    TCHAR* lptstr = GetCommandLine();
-    TCHAR* pCommandLine = NULL;
-    TCHAR* pFirstArg = NULL;
-    TCHAR* pPos = NULL;
+    std::string pCommandLine = "RainbowSix.exe";
     size_t len = 0;
     BOOL bResult = FALSE;
     NTSTATUS nt = 0;
@@ -34,14 +31,14 @@ int _tmain(int argc, _TCHAR* argv[])
 
     // See if there is a log file which indicates we should log our progress.
     hLogFile = CreateFile("r6fix.log", GENERIC_WRITE, FILE_SHARE_WRITE | FILE_SHARE_READ,
-                          NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+        NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
 
     if (hLogFile != INVALID_HANDLE_VALUE)
     {
         DWORD dwWritten = 0;
-        StringCchPrintf(tempString, sizeof(tempString)/sizeof(TCHAR), "\r\n(%d): %S\r\n", GetCurrentProcessId(), PROGNAME);
+        StringCchPrintf(tempString, sizeof(tempString) / sizeof(TCHAR), "\r\n(%d): %S\r\n", GetCurrentProcessId(), PROGNAME);
         SetFilePointer(hLogFile, 0, 0, FILE_END);
-        if (!WriteFile(hLogFile, tempString, (DWORD)(_tcslen(tempString)*sizeof(TCHAR)), &dwWritten, NULL))
+        if (!WriteFile(hLogFile, tempString, (DWORD)(_tcslen(tempString) * sizeof(TCHAR)), &dwWritten, NULL))
         {
             printf("Failed to write to jailbreak.log no logging will be performed. (%d)\n", GetLastError());
             CloseHandle(hLogFile);
@@ -49,17 +46,24 @@ int _tmain(int argc, _TCHAR* argv[])
         }
     }
 
-    pCommandLine = "RainbowSix.exe /belaunch";
+    // Append any command line arguments
+    for (int i = 1; i < argc; i++) // Start from 1 to skip the program name
+    {
+        pCommandLine += " ";
+        pCommandLine += std::string(argv[i]);
+    }
 
     if (hLogFile != INVALID_HANDLE_VALUE)
     {
         DWORD dwWritten = 0;
         StringCchPrintf(tempString, sizeof(tempString) / sizeof(TCHAR), "(%d): Launching new process = %s\r\n", GetCurrentProcessId(), pCommandLine);
-        WriteFile(hLogFile, tempString, (DWORD)(_tcslen(tempString)*sizeof(TCHAR)), &dwWritten, NULL);
+        WriteFile(hLogFile, tempString, (DWORD)(_tcslen(tempString) * sizeof(TCHAR)), &dwWritten, NULL);
     }
 
+    LPSTR argstr = const_cast<char*>(pCommandLine.c_str());
+
     bResult = CreateProcessA(NULL,
-        pCommandLine, NULL, NULL, FALSE, CREATE_SUSPENDED,
+        argstr, NULL, NULL, FALSE, CREATE_SUSPENDED,
         NULL, NULL, &si, &pi);
 
     if (!bResult)
@@ -72,7 +76,7 @@ int _tmain(int argc, _TCHAR* argv[])
     {
         DWORD dwWritten = 0;
         StringCchPrintf(tempString, sizeof(tempString) / sizeof(TCHAR), "(%d): Injecting hook library to process %d\r\n", GetCurrentProcessId(), pi.dwProcessId);
-        WriteFile(hLogFile, tempString, (DWORD)(_tcslen(tempString)*sizeof(TCHAR)), &dwWritten, NULL);
+        WriteFile(hLogFile, tempString, (DWORD)(_tcslen(tempString) * sizeof(TCHAR)), &dwWritten, NULL);
     }
 
     nt = RhInjectLibrary(pi.dwProcessId, 0, EASYHOOK_INJECT_DEFAULT,
@@ -88,8 +92,8 @@ int _tmain(int argc, _TCHAR* argv[])
 
     ResumeThread(pi.hThread);
 
-    if (pCommandLine)
-        free(pCommandLine);
+    /*if (pCommandLine)
+        free(pCommandLine);*/
 
     WaitForSingleObject(pi.hProcess, 5000);
 

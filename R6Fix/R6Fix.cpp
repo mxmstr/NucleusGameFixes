@@ -2,27 +2,11 @@
 //
 #include "stdafx.h"
 #include <sstream>
-#include <vector>
-#include <iostream>
-#include <iomanip>
 #include <windows.h>
 #include <string>
-#include <tlhelp32.h>
 #include <winsock2.h>
-#include <Ws2tcpip.h>
 #include <iphlpapi.h>
-#include <netioapi.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <windns.h>
-#include <winreg.h>
-#include <aclapi.h>
-#include <sddl.h>
 #include <random>
-#include <objbase.h>
-#include <combaseapi.h>
-#include <wbemcli.h>
-#include <map>
 using namespace std;
 
 unsigned char macAddress[6];

@@ -1,0 +1,474 @@
+Adapter Name: {41535F46-E000-4E25-A6FB-8D1E8E36AF2F}
+Adapter Description: Famatech Radmin VPN Ethernet Adapter
+Adapter FriendlyName: Radmin VPN
+Adapter Physical Address Length: 6
+Adapter Physical Address: 2-50-da-e4-35-b1
+Adapter Alignment: 900000178
+Adapter Length: 178
+Adapter Index: 9
+Adapter FirstUnicastAddress: 26.233.216.10
+Adapter FirstMulticastAddress: 224.0.0.1
+Adapter FirstMulticastAddress: 224.0.0.5
+Adapter FirstMulticastAddress: 224.0.0.251
+Adapter FirstMulticastAddress: 224.0.0.252
+Adapter FirstMulticastAddress: 239.255.255.250
+Adapter DnsSuffix: 00705398
+Adapter Flags: 1c5
+Adapter DdnsEnabled: 1
+Adapter RegisterAdapterSuffix: 0
+Adapter Dhcpv4Enabled: 1
+Adapter ReceiveOnly: 0
+Adapter NoMulticast: 0
+Adapter Ipv6OtherStatefulConfig: 0
+Adapter NetbiosOverTcpipEnabled: 1
+Adapter Ipv4Enabled: 1
+Adapter Ipv6Enabled: 1
+Adapter Ipv6ManagedAddressConfigurationSupported: 0
+Adapter Mtu: 5dc
+Adapter IfType: 6
+Adapter OperStatus: 1
+Adapter Ipv6IfIndex: 9
+Adapter ZoneIndices: 0070526C
+Adapter FirstPrefix: 007057CC
+Adapter TransmitLinkSpeed: 5f5e100
+Adapter ReceiveLinkSpeed: 5f5e100
+Adapter FirstWinsServerAddress: 00000000
+Adapter FirstGatewayAddress: 00000000
+Adapter Ipv4Metric: 1
+Adapter Ipv6Metric: 23
+Adapter Luid.Value: 6008014000000
+Adapter Dhcpv4Server.lpSockaddr: 00000000
+Adapter CompartmentId: 1
+Adapter NetworkGuid.Data1: 2e9f0c89
+Adapter ConnectionType: 1
+Adapter TunnelType: 0
+Adapter Dhcpv6Server.lpSockaddr: 00000000
+Adapter Dhcpv6ClientDuid:
+Adapter Dhcpv6ClientDuidLength: e
+Adapter Dhcpv6Iaid: 480250da
+Adapter FirstDnsSuffix: 00000000
+
+Adapter Name: {59FBA4C8-88B4-4F88-9A11-8A11707A2AD1}
+Adapter Description: Realtek PCIe GBE Family Controller
+Adapter FriendlyName: Ethernet
+Adapter Physical Address Length: 6
+Adapter Physical Address: 12-4-d0-75-83-cc
+Adapter Alignment: c00000178
+Adapter Length: 178
+Adapter Index: c
+Adapter FirstUnicastAddress: 169.254.88.73
+Adapter FirstMulticastAddress: 224.0.0.1
+Adapter DnsSuffix: 00705B10
+Adapter Flags: c1
+Adapter DdnsEnabled: 1
+Adapter RegisterAdapterSuffix: 0
+Adapter Dhcpv4Enabled: 0
+Adapter ReceiveOnly: 0
+Adapter NoMulticast: 0
+Adapter Ipv6OtherStatefulConfig: 0
+Adapter NetbiosOverTcpipEnabled: 1
+Adapter Ipv4Enabled: 1
+Adapter Ipv6Enabled: 0
+Adapter Ipv6ManagedAddressConfigurationSupported: 0
+Adapter Mtu: 5dc
+Adapter IfType: 6
+Adapter OperStatus: 2
+Adapter Ipv6IfIndex: 0
+Adapter ZoneIndices: 007059E4
+Adapter FirstPrefix: 00705BFC
+Adapter TransmitLinkSpeed: ffffffffffffffff
+Adapter ReceiveLinkSpeed: ffffffffffffffff
+Adapter FirstWinsServerAddress: 00000000
+Adapter FirstGatewayAddress: 00000000
+Adapter Ipv4Metric: 5
+Adapter Ipv6Metric: 0
+Adapter Luid.Value: 6008001000000
+Adapter Dhcpv4Server.lpSockaddr: 00000000
+Adapter CompartmentId: 1
+Adapter NetworkGuid.Data1: 2e9f0c89
+Adapter ConnectionType: 1
+Adapter TunnelType: 0
+Adapter Dhcpv6Server.lpSockaddr: 00000000
+Adapter Dhcpv6ClientDuid:
+Adapter Dhcpv6ClientDuidLength: 0
+Adapter Dhcpv6Iaid: 0
+Adapter FirstDnsSuffix: 00000000
+
+Adapter Name: {C1D6332D-3417-4DC0-9DC3-AAEFF54620F3}
+Adapter Description: LogMeIn Hamachi Virtual Ethernet Adapter
+Adapter FriendlyName: Hamachi
+Adapter Physical Address Length: 6
+Adapter Physical Address: 7a-79-19-3d-bb-67
+Adapter Alignment: 1a00000178
+Adapter Length: 178
+Adapter Index: 1a
+Adapter FirstUnicastAddress: 169.254.202.48
+Adapter FirstMulticastAddress: 224.0.0.1
+Adapter FirstMulticastAddress: 224.0.0.251
+Adapter FirstMulticastAddress: 224.0.0.252
+Adapter FirstMulticastAddress: 239.255.255.250
+Adapter DnsSuffix: 00705DC4
+Adapter Flags: 1c5
+Adapter DdnsEnabled: 1
+Adapter RegisterAdapterSuffix: 0
+Adapter Dhcpv4Enabled: 1
+Adapter ReceiveOnly: 0
+Adapter NoMulticast: 0
+Adapter Ipv6OtherStatefulConfig: 0
+Adapter NetbiosOverTcpipEnabled: 1
+Adapter Ipv4Enabled: 1
+Adapter Ipv6Enabled: 1
+Adapter Ipv6ManagedAddressConfigurationSupported: 0
+Adapter Mtu: 5dc
+Adapter IfType: 6
+Adapter OperStatus: 1
+Adapter Ipv6IfIndex: 1a
+Adapter ZoneIndices: 00705C98
+Adapter FirstPrefix: 007061D0
+Adapter TransmitLinkSpeed: 2540be400
+Adapter ReceiveLinkSpeed: 2540be400
+Adapter FirstWinsServerAddress: 00000000
+Adapter FirstGatewayAddress: 00000000
+Adapter Ipv4Metric: f
+Adapter Ipv6Metric: f
+Adapter Luid.Value: 6008007000000
+Adapter Dhcpv4Server.lpSockaddr: 00000000
+Adapter CompartmentId: 1
+Adapter NetworkGuid.Data1: 2e9f0c89
+Adapter ConnectionType: 1
+Adapter TunnelType: 0
+Adapter Dhcpv6Server.lpSockaddr: 00000000
+Adapter Dhcpv6ClientDuid:
+Adapter Dhcpv6ClientDuidLength: e
+Adapter Dhcpv6Iaid: 310250f2
+Adapter FirstDnsSuffix: 00000000
+
+Adapter Name: {A631780E-56E5-4141-90A6-DD483A377755}
+Adapter Description: Realtek USB GbE Family Controller
+Adapter FriendlyName: Ethernet 2
+Adapter Physical Address Length: 6
+Adapter Physical Address: 0-e0-4c-e3-2a-77
+Adapter Alignment: 1300000178
+Adapter Length: 178
+Adapter Index: 13
+Adapter FirstUnicastAddress: 192.168.0.15
+Adapter FirstMulticastAddress: 224.0.0.1
+Adapter FirstMulticastAddress: 224.0.0.251
+Adapter FirstMulticastAddress: 224.0.0.252
+Adapter FirstMulticastAddress: 239.255.255.250
+Adapter FirstDnsServerAddress: 75.75.75.75
+Adapter FirstDnsServerAddress: 75.75.76.76
+Adapter DnsSuffix: 00706558
+Adapter Flags: c5
+Adapter DdnsEnabled: 1
+Adapter RegisterAdapterSuffix: 0
+Adapter Dhcpv4Enabled: 1
+Adapter ReceiveOnly: 0
+Adapter NoMulticast: 0
+Adapter Ipv6OtherStatefulConfig: 0
+Adapter NetbiosOverTcpipEnabled: 1
+Adapter Ipv4Enabled: 1
+Adapter Ipv6Enabled: 0
+Adapter Ipv6ManagedAddressConfigurationSupported: 0
+Adapter Mtu: 5dc
+Adapter IfType: 6
+Adapter OperStatus: 1
+Adapter Ipv6IfIndex: 0
+Adapter ZoneIndices: 0070641C
+Adapter FirstPrefix: 00706734
+Adapter TransmitLinkSpeed: 3b9aca00
+Adapter ReceiveLinkSpeed: 3b9aca00
+Adapter FirstWinsServerAddress: 00000000
+Adapter FirstGatewayAddress: 00000000
+Adapter Ipv4Metric: 19
+Adapter Ipv6Metric: 0
+Adapter Luid.Value: 6008013000000
+Adapter Dhcpv4Server.lpSockaddr: 00706548
+Adapter CompartmentId: 1
+Adapter NetworkGuid.Data1: 2e9f0c89
+Adapter ConnectionType: 1
+Adapter TunnelType: 0
+Adapter Dhcpv6Server.lpSockaddr: 00000000
+Adapter Dhcpv6ClientDuid:
+Adapter Dhcpv6ClientDuidLength: 0
+Adapter Dhcpv6Iaid: 0
+Adapter FirstDnsSuffix: 00000000
+
+Adapter Name: {E0BC195E-CA69-4AD7-BE38-6ACAA99915D1}
+Adapter Description: ASUS USB-AC53 Nano USB Wireless adapter
+Adapter FriendlyName: Wi-Fi
+Adapter Physical Address Length: 6
+Adapter Physical Address: 7c-10-c9-57-8c-8d
+Adapter Alignment: 1f00000178
+Adapter Length: 178
+Adapter Index: 1f
+Adapter FirstUnicastAddress: 169.254.100.160
+Adapter FirstMulticastAddress: 224.0.0.1
+Adapter DnsSuffix: 00706974
+Adapter Flags: c1
+Adapter DdnsEnabled: 1
+Adapter RegisterAdapterSuffix: 0
+Adapter Dhcpv4Enabled: 0
+Adapter ReceiveOnly: 0
+Adapter NoMulticast: 0
+Adapter Ipv6OtherStatefulConfig: 0
+Adapter NetbiosOverTcpipEnabled: 1
+Adapter Ipv4Enabled: 1
+Adapter Ipv6Enabled: 0
+Adapter Ipv6ManagedAddressConfigurationSupported: 0
+Adapter Mtu: 5dc
+Adapter IfType: 47
+Adapter OperStatus: 2
+Adapter Ipv6IfIndex: 0
+Adapter ZoneIndices: 00706848
+Adapter FirstPrefix: 00706A64
+Adapter TransmitLinkSpeed: ffffffffffffffff
+Adapter ReceiveLinkSpeed: ffffffffffffffff
+Adapter FirstWinsServerAddress: 00000000
+Adapter FirstGatewayAddress: 00000000
+Adapter Ipv4Metric: 19
+Adapter Ipv6Metric: 0
+Adapter Luid.Value: 47008000000000
+Adapter Dhcpv4Server.lpSockaddr: 00000000
+Adapter CompartmentId: 1
+Adapter NetworkGuid.Data1: 2e9f0c89
+Adapter ConnectionType: 1
+Adapter TunnelType: 0
+Adapter Dhcpv6Server.lpSockaddr: 00000000
+Adapter Dhcpv6ClientDuid:
+Adapter Dhcpv6ClientDuidLength: 0
+Adapter Dhcpv6Iaid: 0
+Adapter FirstDnsSuffix: 00000000
+
+Adapter Name: {796FFC2A-D6D3-4ADD-B153-5C23F66DED89}
+Adapter Description: Microsoft Wi-Fi Direct Virtual Adapter
+Adapter FriendlyName: Local Area Connection* 9
+Adapter Physical Address Length: 6
+Adapter Physical Address: 7e-10-c9-57-8c-8d
+Adapter Alignment: e00000178
+Adapter Length: 178
+Adapter Index: e
+Adapter FirstUnicastAddress: 169.254.181.20
+Adapter FirstMulticastAddress: 224.0.0.1
+Adapter DnsSuffix: 00706C2C
+Adapter Flags: c1
+Adapter DdnsEnabled: 1
+Adapter RegisterAdapterSuffix: 0
+Adapter Dhcpv4Enabled: 0
+Adapter ReceiveOnly: 0
+Adapter NoMulticast: 0
+Adapter Ipv6OtherStatefulConfig: 0
+Adapter NetbiosOverTcpipEnabled: 1
+Adapter Ipv4Enabled: 1
+Adapter Ipv6Enabled: 0
+Adapter Ipv6ManagedAddressConfigurationSupported: 0
+Adapter Mtu: 5dc
+Adapter IfType: 47
+Adapter OperStatus: 2
+Adapter Ipv6IfIndex: 0
+Adapter ZoneIndices: 00706B00
+Adapter FirstPrefix: 00706D40
+Adapter TransmitLinkSpeed: ffffffffffffffff
+Adapter ReceiveLinkSpeed: ffffffffffffffff
+Adapter FirstWinsServerAddress: 00000000
+Adapter FirstGatewayAddress: 00000000
+Adapter Ipv4Metric: 19
+Adapter Ipv6Metric: 0
+Adapter Luid.Value: 47008001000000
+Adapter Dhcpv4Server.lpSockaddr: 00000000
+Adapter CompartmentId: 1
+Adapter NetworkGuid.Data1: 2e9f0c89
+Adapter ConnectionType: 1
+Adapter TunnelType: 0
+Adapter Dhcpv6Server.lpSockaddr: 00000000
+Adapter Dhcpv6ClientDuid:
+Adapter Dhcpv6ClientDuidLength: 0
+Adapter Dhcpv6Iaid: 0
+Adapter FirstDnsSuffix: 00000000
+
+Adapter Name: {392A8687-B451-4816-B3A7-C5B8D6462837}
+Adapter Description: Microsoft Wi-Fi Direct Virtual Adapter #2
+Adapter FriendlyName: Local Area Connection* 10
+Adapter Physical Address Length: 6
+Adapter Physical Address: 7c-10-c9-57-8c-8d
+Adapter Alignment: 700000178
+Adapter Length: 178
+Adapter Index: 7
+Adapter FirstUnicastAddress: 169.254.188.95
+Adapter FirstMulticastAddress: 224.0.0.1
+Adapter DnsSuffix: 00706F08
+Adapter Flags: c1
+Adapter DdnsEnabled: 1
+Adapter RegisterAdapterSuffix: 0
+Adapter Dhcpv4Enabled: 0
+Adapter ReceiveOnly: 0
+Adapter NoMulticast: 0
+Adapter Ipv6OtherStatefulConfig: 0
+Adapter NetbiosOverTcpipEnabled: 1
+Adapter Ipv4Enabled: 1
+Adapter Ipv6Enabled: 0
+Adapter Ipv6ManagedAddressConfigurationSupported: 0
+Adapter Mtu: 5dc
+Adapter IfType: 47
+Adapter OperStatus: 2
+Adapter Ipv6IfIndex: 0
+Adapter ZoneIndices: 00706DDC
+Adapter FirstPrefix: 00707024
+Adapter TransmitLinkSpeed: ffffffffffffffff
+Adapter ReceiveLinkSpeed: ffffffffffffffff
+Adapter FirstWinsServerAddress: 00000000
+Adapter FirstGatewayAddress: 00000000
+Adapter Ipv4Metric: 19
+Adapter Ipv6Metric: 0
+Adapter Luid.Value: 47008002000000
+Adapter Dhcpv4Server.lpSockaddr: 00000000
+Adapter CompartmentId: 1
+Adapter NetworkGuid.Data1: 2e9f0c89
+Adapter ConnectionType: 1
+Adapter TunnelType: 0
+Adapter Dhcpv6Server.lpSockaddr: 00000000
+Adapter Dhcpv6ClientDuid:
+Adapter Dhcpv6ClientDuidLength: 0
+Adapter Dhcpv6Iaid: 0
+Adapter FirstDnsSuffix: 00000000
+
+Adapter Name: {E07A9D75-1177-4334-A8E7-F6390A851A8D}
+Adapter Description: ZeroTier Virtual Port
+Adapter FriendlyName: ZeroTier One [a0cbf4b62acecc93]
+Adapter Physical Address Length: 6
+Adapter Physical Address: 92-28-d4-1f-51-5f
+Adapter Alignment: 1e00000178
+Adapter Length: 178
+Adapter Index: 1e
+Adapter FirstUnicastAddress: 172.26.54.78
+Adapter FirstMulticastAddress: 224.0.0.1
+Adapter FirstMulticastAddress: 224.0.0.251
+Adapter FirstMulticastAddress: 224.0.0.252
+Adapter FirstMulticastAddress: 239.255.255.250
+Adapter DnsSuffix: 007071EC
+Adapter Flags: c5
+Adapter DdnsEnabled: 1
+Adapter RegisterAdapterSuffix: 0
+Adapter Dhcpv4Enabled: 1
+Adapter ReceiveOnly: 0
+Adapter NoMulticast: 0
+Adapter Ipv6OtherStatefulConfig: 0
+Adapter NetbiosOverTcpipEnabled: 1
+Adapter Ipv4Enabled: 1
+Adapter Ipv6Enabled: 0
+Adapter Ipv6ManagedAddressConfigurationSupported: 0
+Adapter Mtu: af0
+Adapter IfType: 6
+Adapter OperStatus: 1
+Adapter Ipv6IfIndex: 0
+Adapter ZoneIndices: 007070C0
+Adapter FirstPrefix: 00707364
+Adapter TransmitLinkSpeed: 5f5e100
+Adapter ReceiveLinkSpeed: 5f5e100
+Adapter FirstWinsServerAddress: 00000000
+Adapter FirstGatewayAddress: 00000000
+Adapter Ipv4Metric: 23
+Adapter Ipv6Metric: 0
+Adapter Luid.Value: 6008006000000
+Adapter Dhcpv4Server.lpSockaddr: 00000000
+Adapter CompartmentId: 1
+Adapter NetworkGuid.Data1: 2e9f0c89
+Adapter ConnectionType: 1
+Adapter TunnelType: 0
+Adapter Dhcpv6Server.lpSockaddr: 00000000
+Adapter Dhcpv6ClientDuid:
+Adapter Dhcpv6ClientDuidLength: 0
+Adapter Dhcpv6Iaid: 0
+Adapter FirstDnsSuffix: 00000000
+
+Adapter Name: {4342ACC1-F282-4185-B2AD-45C14A57AA38}
+Adapter Description: Bluetooth Device (Personal Area Network) #3
+Adapter FriendlyName: Bluetooth Network Connection 3
+Adapter Physical Address Length: 6
+Adapter Physical Address: 0-e0-4c-6b-6f-33
+Adapter Alignment: b00000178
+Adapter Length: 178
+Adapter Index: b
+Adapter FirstUnicastAddress: 169.254.17.236
+Adapter FirstMulticastAddress: 224.0.0.1
+Adapter DnsSuffix: 007075A4
+Adapter Flags: 1c1
+Adapter DdnsEnabled: 1
+Adapter RegisterAdapterSuffix: 0
+Adapter Dhcpv4Enabled: 0
+Adapter ReceiveOnly: 0
+Adapter NoMulticast: 0
+Adapter Ipv6OtherStatefulConfig: 0
+Adapter NetbiosOverTcpipEnabled: 1
+Adapter Ipv4Enabled: 1
+Adapter Ipv6Enabled: 1
+Adapter Ipv6ManagedAddressConfigurationSupported: 0
+Adapter Mtu: 5dc
+Adapter IfType: 6
+Adapter OperStatus: 2
+Adapter Ipv6IfIndex: b
+Adapter ZoneIndices: 00707478
+Adapter FirstPrefix: 00707850
+Adapter TransmitLinkSpeed: 2dc6c0
+Adapter ReceiveLinkSpeed: 2dc6c0
+Adapter FirstWinsServerAddress: 00000000
+Adapter FirstGatewayAddress: 00000000
+Adapter Ipv4Metric: 41
+Adapter Ipv6Metric: 41
+Adapter Luid.Value: 6008008000000
+Adapter Dhcpv4Server.lpSockaddr: 00000000
+Adapter CompartmentId: 1
+Adapter NetworkGuid.Data1: 2e9f0c89
+Adapter ConnectionType: 1
+Adapter TunnelType: 0
+Adapter Dhcpv6Server.lpSockaddr: 00000000
+Adapter Dhcpv6ClientDuid:
+Adapter Dhcpv6ClientDuidLength: 0
+Adapter Dhcpv6Iaid: 0
+Adapter FirstDnsSuffix: 00000000
+
+Adapter Name: {2E9F0C8A-00D9-11EB-A22D-806E6F6E6963}
+Adapter Description: Software Loopback Interface 1
+Adapter FriendlyName: Loopback Pseudo-Interface 1
+Adapter Physical Address Length: 0
+Adapter Physical Address:
+Adapter Alignment: 100000178
+Adapter Length: 178
+Adapter Index: 1
+Adapter FirstUnicastAddress: 127.0.0.1
+Adapter FirstMulticastAddress: 239.255.255.250
+Adapter DnsSuffix: 00707AB4
+Adapter Flags: 181
+Adapter DdnsEnabled: 1
+Adapter RegisterAdapterSuffix: 0
+Adapter Dhcpv4Enabled: 0
+Adapter ReceiveOnly: 0
+Adapter NoMulticast: 0
+Adapter Ipv6OtherStatefulConfig: 0
+Adapter NetbiosOverTcpipEnabled: 0
+Adapter Ipv4Enabled: 1
+Adapter Ipv6Enabled: 1
+Adapter Ipv6ManagedAddressConfigurationSupported: 0
+Adapter Mtu: ffffffff
+Adapter IfType: 18
+Adapter OperStatus: 1
+Adapter Ipv6IfIndex: 1
+Adapter ZoneIndices: 00707988
+Adapter FirstPrefix: 00707CD8
+Adapter TransmitLinkSpeed: 40000000
+Adapter ReceiveLinkSpeed: 40000000
+Adapter FirstWinsServerAddress: 00000000
+Adapter FirstGatewayAddress: 00000000
+Adapter Ipv4Metric: 4b
+Adapter Ipv6Metric: 4b
+Adapter Luid.Value: 18000000000000
+Adapter Dhcpv4Server.lpSockaddr: 00000000
+Adapter CompartmentId: 1
+Adapter NetworkGuid.Data1: 2e9f0c89
+Adapter ConnectionType: 1
+Adapter TunnelType: 0
+Adapter Dhcpv6Server.lpSockaddr: 00000000
+Adapter Dhcpv6ClientDuid:
+Adapter Dhcpv6ClientDuidLength: 0
+Adapter Dhcpv6Iaid: 0
+Adapter FirstDnsSuffix: 00000000

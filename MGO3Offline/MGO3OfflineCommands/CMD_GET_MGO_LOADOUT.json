@@ -1,0 +1,15 @@
+{
+    "compress": true,
+    "data": {
+        "loadout": null,
+        "crypto_type": "COMPOUND",
+        "flowid": null,
+        "msgid": "CMD_GET_MGO_LOADOUT",
+        "result": "NOERR",
+        "rqid": 0,
+        "xuid": null
+    },
+    "original_size": 1633,
+    "session_crypto": true,
+    "session_key": null
+}

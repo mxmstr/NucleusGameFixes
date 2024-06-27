@@ -3974,6 +3974,15 @@ int MyGetHostName(char* name, int namelen)
     return result;
 }
 
+BOOL WINAPI MyCreateProcessW(LPCWSTR lpApplicationName, LPWSTR lpCommandLine, LPSECURITY_ATTRIBUTES lpProcessAttributes, LPSECURITY_ATTRIBUTES lpThreadAttributes, BOOL bInheritHandles, DWORD dwCreationFlags, LPVOID lpEnvironment, LPCWSTR lpCurrentDirectory, LPSTARTUPINFOW lpStartupInfo, LPPROCESS_INFORMATION lpProcessInformation)
+{
+    std::wstringstream logMessage;
+    logMessage << L"CreateProcessW: " << lpApplicationName << L" " << lpCommandLine;
+    LogW(logMessage.str());
+
+    return CreateProcessW(lpApplicationName, lpCommandLine, lpProcessAttributes, lpThreadAttributes, bInheritHandles, dwCreationFlags, lpEnvironment, lpCurrentDirectory, lpStartupInfo, lpProcessInformation);
+}
+
 hostent* WSAAPI MyGetHostByName(const char* name)
 {
     Log("MyGetHostByName");
@@ -4032,8 +4041,10 @@ VIRTUALNET_API void __stdcall NativeInjectionEntryPoint(REMOTE_ENTRY_INFO* remot
     else {
         Log("TargetIPAddress not found");
     }
-    
-    InstallHook("ws2_32.dll", "bind", MyBind);
+
+    InstallHook("Kernel32.dll", "CreateProcessW", MyCreateProcessW);
+
+    //InstallHook("ws2_32.dll", "bind", MyBind);
     //InstallHook("ws2_32.dll", "gethostname", MyGetHostName); //
     //InstallHook("ws2_32.dll", "gethostbyname", MyGetHostByName); //
     //InstallHook("ws2_32.dll", "WSAIoctl", MyWSAIoctl);

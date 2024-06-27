@@ -1,0 +1,17 @@
+{
+    "compress": false,
+    "data": {
+        "crypto_type": "COMPOUND",
+        "flowid": null,
+        "msgid": "CMD_GET_MGO_PURCHASED_ITEM",
+        "purchasable_item_list": {
+            "purchasable_item_list": []
+        },
+        "result": "NOERR",
+        "rqid": 0,
+        "xuid": null
+    },
+    "original_size": 1633,
+    "session_crypto": true,
+    "session_key": null
+}

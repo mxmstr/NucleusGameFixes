@@ -1,0 +1,31 @@
+{
+    "compress": true,
+    "data": {
+        "crypto_type": "COMPOUND",
+        "flowid": null,
+        "msgid": "CMD_GET_MGO_TITLE_USR",
+        "result": "NOERR",
+        "rqid": 0,
+        "title_list": [
+            {
+                "flag": 0,
+                "gp": 0,
+                "id": 90900
+            },
+            {
+                "flag": 0,
+                "gp": 0,
+                "id": 11160
+            },
+            {
+                "flag": 0,
+                "gp": 0,
+                "id": 11180
+            }
+        ],
+        "xuid": null
+    },
+    "original_size": 1633,
+    "session_crypto": true,
+    "session_key": null
+}

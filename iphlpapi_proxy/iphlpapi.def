@@ -1,0 +1,8 @@
+EXPORTS
+    GetAdaptersInfo=MyGetAdaptersInfo2
+    GetAdaptersAddresses=MyGetAdaptersAddresses2
+    GetIfEntry=MyGetIfEntry
+    GetBestInterfaceEx=MyGetBestInterfaceEx
+    GetIpForwardTable=MyGetIpForwardTable
+    GetIpStatisticsEx=MyGetIpStatisticsEx
+    GetNetworkParams=MyGetNetworkParams

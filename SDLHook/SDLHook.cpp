@@ -102,7 +102,7 @@ SDL_GameController* SDLCALL MySDL_GameControllerOpen(int joystick_index)
     return (controllerIndex == joystick_index) ? SDL_GameControllerOpen(controllerIndex) : nullptr;
 }
 
-SDLHOOK_API void __stdcall NativeInjectionEntryPoint(REMOTE_ENTRY_INFO * remoteInfo)
+MGO3OFFLINE void __stdcall NativeInjectionEntryPoint(REMOTE_ENTRY_INFO * remoteInfo)
 {
     ZeroMemory(tempString, sizeof(tempString));
     ZeroMemory(tempStringW, sizeof(tempStringW));

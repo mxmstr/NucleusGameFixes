@@ -1,0 +1,97 @@
+{
+    "compress": false,
+    "data": {
+        "addendum_list": [
+            {
+                "index": 4,
+                "message_list": [
+                    {
+                        "confirm": "Confirm Privacy Policy",
+                        "lang": 0,
+                        "text": "Addendum for California Residents",
+                        "title": "Privacy Policy"
+                    },
+                    {
+                        "confirm": "Confirm Privacy Policy",
+                        "lang": 1,
+                        "text": "Addendum for California Residents",
+                        "title": "Privacy Policy"
+                    },
+                    {
+                        "confirm": "Confirm Privacy Policy",
+                        "lang": 2,
+                        "text": "Addendum for California Residents",
+                        "title": "Privacy Policy"
+                    },
+                    {
+                        "confirm": "Confirm Privacy Policy",
+                        "lang": 0,
+                        "text": "Addendum for California Residents",
+                        "title": "Privacy Policy"
+                    },
+                    {
+                        "confirm": "Confirm Privacy Policy",
+                        "lang": 3,
+                        "text": "Addendum for California Residents",
+                        "title": "Privacy Policy"
+                    },
+                    {
+                        "confirm": "Confirm Privacy Policy",
+                        "lang": 4,
+                        "text": "Addendum for California Residents",
+                        "title": "Privacy Policy"
+                    },
+                    {
+                        "confirm": "Confirm Privacy Policy",
+                        "lang": 5,
+                        "text": "Addendum for California Residents",
+                        "title": "Privacy Policy"
+                    },
+                    {
+                        "confirm": "Confirm Privacy Policy",
+                        "lang": 6,
+                        "text": "Addendum for California Residents",
+                        "title": "Privacy Policy"
+                    },
+                    {
+                        "confirm": "Confirm Privacy Policy",
+                        "lang": 7,
+                        "text": "Addendum for California Residents",
+                        "title": "Privacy Policy"
+                    },
+                    {
+                        "confirm": "Confirm Privacy Policy",
+                        "lang": 8,
+                        "text": "Addendum for California Residents",
+                        "title": "Privacy Policy"
+                    },
+                    {
+                        "confirm": "Confirm Privacy Policy",
+                        "lang": 9,
+                        "text": "Addendum for California Residents",
+                        "title": "Privacy Policy"
+                    },
+                    {
+                        "confirm": "Confirm Privacy Policy",
+                        "lang": 10,
+                        "text": "Addendum for California Residents",
+                        "title": "Privacy Policy"
+                    }
+                ]
+            }
+        ],
+        "ccpa_state_index": 20,
+        "crypto_type": "COMMON",
+        "flowid": null,
+        "gdpr_country_index": 65,
+        "geo_ip_country": "JP",
+        "geo_ip_state": "",
+        "msgid": "CMD_GDPR_CHECK",
+        "result": "NOERR",
+        "rqid": 0,
+        "xuid": null
+    },
+    "original_size": 1633,
+    "session_crypto": true,
+    "session_key": null
+}

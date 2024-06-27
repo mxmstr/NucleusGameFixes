@@ -13,10 +13,24 @@
 
 int _tmain(int argc, _TCHAR* argv[])
 {
+    std::string iniFilePath = "";
+
+    TCHAR executablePath[MAX_PATH];
+    if (GetCurrentDirectory(MAX_PATH, executablePath)) {
+        iniFilePath = std::string(executablePath) + "\\SDLHook.ini";
+    }
+
+    char programNameBuffer[256];
+    GetPrivateProfileString("Settings", "ProgramName", "", programNameBuffer, sizeof(programNameBuffer), iniFilePath.c_str());
+
+    char* programName = new char[strlen(programNameBuffer) + 1];  // +1 for the null terminator
+    std::strcpy(programName, programNameBuffer);
+
+
     int ret = 0;
     STARTUPINFO si;
     PROCESS_INFORMATION pi;
-    std::string pCommandLine = "Battlefront.exe";
+    std::string pCommandLine = programName;
     size_t len = 0;
     BOOL bResult = FALSE;
     NTSTATUS nt = 0;

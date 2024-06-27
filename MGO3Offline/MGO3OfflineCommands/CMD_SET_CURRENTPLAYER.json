@@ -1,0 +1,16 @@
+{
+    "compress": false,
+    "data": {
+        "crypto_type": "COMPOUND",
+        "flag": 0,
+        "flowid": null,
+        "msgid": "CMD_SET_CURRENTPLAYER",
+        "player_id": 595034,
+        "result": "NOERR",
+        "rqid": 0,
+        "xuid": null
+    },
+    "original_size": 0,
+    "session_crypto": true,
+    "session_key": ""
+}
