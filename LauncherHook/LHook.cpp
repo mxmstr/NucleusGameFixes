@@ -168,8 +168,8 @@ BOOL WINAPI MyCreateProcessW(
 
     //Sleep(10000);
 
-    //ResumeThread(lpProcessInformation->hThread);
-    //WaitForSingleObject(lpProcessInformation->hProcess, 5000);
+    ResumeThread(lpProcessInformation->hThread);
+    WaitForSingleObject(lpProcessInformation->hProcess, 5000);
 
     return TRUE;
 }

@@ -9,60 +9,60 @@
 
 int main()
 {
-    // Call GetAdaptersInfo and print the adapter information
-    ULONG bufferSize = 0;
-    PIP_ADAPTER_INFO adapterInfo = nullptr;
+    //// Call GetAdaptersInfo and print the adapter information
+    //ULONG bufferSize = 0;
+    //PIP_ADAPTER_INFO adapterInfo = nullptr;
 
-    // Call GetAdaptersInfo to get the required buffer size
-    DWORD result = GetAdaptersInfo(nullptr, &bufferSize);
-    if (result == ERROR_BUFFER_OVERFLOW)
-    {
-        adapterInfo = reinterpret_cast<IP_ADAPTER_INFO*>(new char[bufferSize]);
+    //// Call GetAdaptersInfo to get the required buffer size
+    //DWORD result = GetAdaptersInfo(nullptr, &bufferSize);
+    //if (result == ERROR_BUFFER_OVERFLOW)
+    //{
+    //    adapterInfo = reinterpret_cast<IP_ADAPTER_INFO*>(new char[bufferSize]);
 
-        // Call GetAdaptersInfo again to get the adapter information
-        result = GetAdaptersInfo(adapterInfo, &bufferSize);
-        if (result == NO_ERROR)
-        {
-            PIP_ADAPTER_INFO currentAdapter = adapterInfo;
-            while (currentAdapter != nullptr)
-            {
-                std::cout << "Adapter ComboIndex: " << currentAdapter->ComboIndex << std::endl;
-                std::cout << "Adapter Name: " << currentAdapter->AdapterName << std::endl;
-                std::cout << "Adapter Description: " << currentAdapter->Description << std::endl;
-                std::cout << "Adapter Address Length: " << currentAdapter->AddressLength << std::endl;
-                std::cout << "Adapter Address: ";
-                for (UINT i = 0; i < currentAdapter->AddressLength; i++)
-                {
-                    if (i == currentAdapter->AddressLength - 1)
-                    {
-                        std::cout << std::hex << static_cast<int>(currentAdapter->Address[i]);
-                    }
-                    else
-                    {
-                        std::cout << std::hex << static_cast<int>(currentAdapter->Address[i]) << "-";
-                    }
-                }
-                std::cout << std::endl;
-                std::cout << "Adapter Index: " << currentAdapter->Index << std::endl;
-                std::cout << "Adapter Type: " << currentAdapter->Type << std::endl;
-                std::cout << "Adapter DhcpEnabled: " << currentAdapter->DhcpEnabled << std::endl;
-                //std::cout << "Adapter CurrentIpAddress: " << currentAdapter->CurrentIpAddress->IpAddress.String << std::endl;
-                //std::cout << "Adapter CurrentIpMask: " << currentAdapter->CurrentIpAddress->IpMask.String << std::endl;
-                std::cout << "Adapter FirstIpAddress: " << currentAdapter->IpAddressList.IpAddress.String << std::endl;
-                std::cout << "Adapter FirstIpMask: " << currentAdapter->IpAddressList.IpMask.String << std::endl;
-                std::cout << "Adapter Gateway: " << currentAdapter->GatewayList.IpAddress.String << std::endl;
-                std::cout << "Adapter DhcpServer: " << currentAdapter->DhcpServer.IpAddress.String << std::endl;
-                std::cout << "Adapter HaveWins: " << currentAdapter->HaveWins << std::endl;
-                std::cout << "Adapter PrimaryWinsServer: " << currentAdapter->PrimaryWinsServer.IpAddress.String << std::endl;
-                std::cout << "Adapter SecondaryWinsServer: " << currentAdapter->SecondaryWinsServer.IpAddress.String << std::endl;
-                std::cout << "Adapter LeaseObtained: " << currentAdapter->LeaseObtained << std::endl;
-                std::cout << "Adapter LeaseExpires: " << currentAdapter->LeaseExpires << std::endl;
-                std::cout << std::endl;
+    //    // Call GetAdaptersInfo again to get the adapter information
+    //    result = GetAdaptersInfo(adapterInfo, &bufferSize);
+    //    if (result == NO_ERROR)
+    //    {
+    //        PIP_ADAPTER_INFO currentAdapter = adapterInfo;
+    //        while (currentAdapter != nullptr)
+    //        {
+    //            std::cout << "Adapter ComboIndex: " << currentAdapter->ComboIndex << std::endl;
+    //            std::cout << "Adapter Name: " << currentAdapter->AdapterName << std::endl;
+    //            std::cout << "Adapter Description: " << currentAdapter->Description << std::endl;
+    //            std::cout << "Adapter Address Length: " << currentAdapter->AddressLength << std::endl;
+    //            std::cout << "Adapter Address: ";
+    //            for (UINT i = 0; i < currentAdapter->AddressLength; i++)
+    //            {
+    //                if (i == currentAdapter->AddressLength - 1)
+    //                {
+    //                    std::cout << std::hex << static_cast<int>(currentAdapter->Address[i]);
+    //                }
+    //                else
+    //                {
+    //                    std::cout << std::hex << static_cast<int>(currentAdapter->Address[i]) << "-";
+    //                }
+    //            }
+    //            std::cout << std::endl;
+    //            std::cout << "Adapter Index: " << currentAdapter->Index << std::endl;
+    //            std::cout << "Adapter Type: " << currentAdapter->Type << std::endl;
+    //            std::cout << "Adapter DhcpEnabled: " << currentAdapter->DhcpEnabled << std::endl;
+    //            //std::cout << "Adapter CurrentIpAddress: " << currentAdapter->CurrentIpAddress->IpAddress.String << std::endl;
+    //            //std::cout << "Adapter CurrentIpMask: " << currentAdapter->CurrentIpAddress->IpMask.String << std::endl;
+    //            std::cout << "Adapter FirstIpAddress: " << currentAdapter->IpAddressList.IpAddress.String << std::endl;
+    //            std::cout << "Adapter FirstIpMask: " << currentAdapter->IpAddressList.IpMask.String << std::endl;
+    //            std::cout << "Adapter Gateway: " << currentAdapter->GatewayList.IpAddress.String << std::endl;
+    //            std::cout << "Adapter DhcpServer: " << currentAdapter->DhcpServer.IpAddress.String << std::endl;
+    //            std::cout << "Adapter HaveWins: " << currentAdapter->HaveWins << std::endl;
+    //            std::cout << "Adapter PrimaryWinsServer: " << currentAdapter->PrimaryWinsServer.IpAddress.String << std::endl;
+    //            std::cout << "Adapter SecondaryWinsServer: " << currentAdapter->SecondaryWinsServer.IpAddress.String << std::endl;
+    //            std::cout << "Adapter LeaseObtained: " << currentAdapter->LeaseObtained << std::endl;
+    //            std::cout << "Adapter LeaseExpires: " << currentAdapter->LeaseExpires << std::endl;
+    //            std::cout << std::endl;
 
-                currentAdapter = currentAdapter->Next;
-            }
-        }
-    }
+    //            currentAdapter = currentAdapter->Next;
+    //        }
+    //    }
+    //}
 
     /*typedef struct _IP_ADAPTER_INFO {
         struct _IP_ADAPTER_INFO* Next;

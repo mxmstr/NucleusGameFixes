@@ -23,6 +23,7 @@
 //#include <combaseapi.h>
 //#include <wbemcli.h>
 #include <map>
+#include <WbemCli.h>
 //#include <setupapi.h>
 //#include <cstdio>
 //#include <ntdef.h>
@@ -2993,48 +2994,48 @@ bool IsTargetIPAddress(const char* ipAddress, const char* targetIPAddress)
 //    {__uuidof(IWbemHiPerfEnum), L"IWbemHiPerfEnum" },
 //};
 //
-//HRESULT WINAPI MyCoCreateInstance(REFCLSID rclsid, LPUNKNOWN pUnkOuter, DWORD dwClsContext, REFIID riid, LPVOID* ppv)
-//{
-//    Log("CoCreateInstance");
-//
-//    WCHAR guidString[40] = { 0 };
-//    StringFromGUID2(riid, guidString, 40);
-//
-//    std::wstringstream logMessage;
-//    logMessage << L"CoCreateInstance called. Requested interface IID: " << guidString;
-//    LogW(logMessage.str());
-//
-//    HRESULT result = CoCreateInstance(rclsid, pUnkOuter, dwClsContext, riid, ppv);
-//
-//    if (SUCCEEDED(result) && riid == __uuidof(IWbemLocator)) {
-//        Log("IWbemLocator");
-//        IWbemLocator* original = static_cast<IWbemLocator*>(*ppv);
-//        *ppv = new MyWbemLocatorDecorator(original);
-//    }
-//
-//    return result;
-//
-//    //WCHAR guidString[40] = { 0 };
-//    //StringFromGUID2(riid, guidString, 40);
-//
-//    //std::wstringstream logMessage;
-//    //logMessage << L"CoCreateInstance called. Requested interface IID: " << guidString;
-//
-//    //// Check if the riid is in the knownInterfaces map
-//    //auto it = knownInterfaces.find(riid);
-//    //if (it != knownInterfaces.end()) {
-//    //    logMessage << L" - Interface Name: " << it->second;
-//    //}
-//    //else {
-//    //    logMessage << L" - No matching interface found";
-//    //}
-//
-//    //LogW(logMessage.str());
-//
-//    //HRESULT result = CoCreateInstance(rclsid, pUnkOuter, dwClsContext, riid, ppv);
-//    //return result;
-//
-//}
+HRESULT WINAPI MyCoCreateInstance(REFCLSID rclsid, LPUNKNOWN pUnkOuter, DWORD dwClsContext, REFIID riid, LPVOID* ppv)
+{
+    Log("CoCreateInstance");
+
+    WCHAR guidString[40] = { 0 };
+    StringFromGUID2(riid, guidString, 40);
+
+    std::wstringstream logMessage;
+    logMessage << L"CoCreateInstance called. Requested interface IID: " << guidString;
+    LogW(logMessage.str());
+
+    HRESULT result = CoCreateInstance(rclsid, pUnkOuter, dwClsContext, riid, ppv);
+
+    if (SUCCEEDED(result) && riid == __uuidof(IWbemLocator)) {
+        Log("IWbemLocator");
+        IWbemLocator* original = static_cast<IWbemLocator*>(*ppv);
+        *ppv = new MyWbemLocatorDecorator(original);
+    }
+
+    return result;
+
+    //WCHAR guidString[40] = { 0 };
+    //StringFromGUID2(riid, guidString, 40);
+
+    //std::wstringstream logMessage;
+    //logMessage << L"CoCreateInstance called. Requested interface IID: " << guidString;
+
+    //// Check if the riid is in the knownInterfaces map
+    //auto it = knownInterfaces.find(riid);
+    //if (it != knownInterfaces.end()) {
+    //    logMessage << L" - Interface Name: " << it->second;
+    //}
+    //else {
+    //    logMessage << L" - No matching interface found";
+    //}
+
+    //LogW(logMessage.str());
+
+    //HRESULT result = CoCreateInstance(rclsid, pUnkOuter, dwClsContext, riid, ppv);
+    //return result;
+
+}
 //
 //HRESULT WINAPI MyCoCreateInstanceEx(REFCLSID Clsid, IUnknown* punkOuter, DWORD dwClsCtx, COSERVERINFO* pServerInfo, DWORD dwCount, MULTI_QI* pResults)
 //{

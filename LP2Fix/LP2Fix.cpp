@@ -32,6 +32,7 @@ HANDLE hLogFile = INVALID_HANDLE_VALUE;
 TCHAR tempString[2048];
 WCHAR tempStringW[2048];
 char* targetIPAddress = "";
+char* targetIPAddress2 = "";
 const int MAX_PROCESS_ID_LENGTH = 10;
 const int MAX_PORT_OFFSET_LENGTH = 2;
 const char PADDING_CHAR = '#';
@@ -268,7 +269,7 @@ int WINAPI MyGetSockName(SOCKET s, struct sockaddr* name, int* namelen)
     // Set the address to 192.168.0.12
     struct sockaddr_in addr = {};
     addr.sin_family = AF_INET;
-    addr.sin_addr.s_addr = inet_addr(targetIPAddress);
+    addr.sin_addr.s_addr = inet_addr(targetIPAddress2);
     addr.sin_port = htons(3074);
 
     // Copy the address to the buffer
@@ -763,6 +764,15 @@ __declspec(dllexport) void __stdcall NativeInjectionEntryPoint(REMOTE_ENTRY_INFO
     
     Log("TargetIPAddress");
     Log(targetIPAddress);
+
+    char targetIPBuffer2[256];
+    GetPrivateProfileString("Settings", "TargetIPAddress2", "", targetIPBuffer2, sizeof(targetIPBuffer2), iniFilePath.c_str());
+
+    targetIPAddress2 = new char[strlen(targetIPBuffer2) + 1];
+    std::strcpy(targetIPAddress2, targetIPBuffer2);
+
+    Log("TargetIPAddress2");
+    Log(targetIPAddress2);
     
     // Load the portOffset value
     portOffset = GetPrivateProfileInt("Settings", "PortOffset", 0, iniFilePath.c_str());
@@ -788,12 +798,12 @@ __declspec(dllexport) void __stdcall NativeInjectionEntryPoint(REMOTE_ENTRY_INFO
     //InstallHook("ws2_32.dll", "sendto", MySendTo2);
     //Log("Installed sendto hook");
 
-    InstallHook("ws2_32.dll", "WSAIoctl", MyWSAIoctl);
+    //InstallHook("ws2_32.dll", "WSAIoctl", MyWSAIoctl);
 
-    //InstallHook("ws2_32.dll", "bind", MyBind);
-    //Log("Installed bind hook");
+    InstallHook("ws2_32.dll", "bind", MyBind);
+    Log("Installed bind hook");
 
-    //InstallHook("ws2_32.dll", "getsockname", MyGetSockName);
+    InstallHook("ws2_32.dll", "getsockname", MyGetSockName);
 
     //InstallHook("ws2_32.dll", "setsockopt", MySetSocketOpt);
 

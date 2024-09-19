@@ -51,7 +51,7 @@ int _tmain(int argc, _TCHAR* argv[])
         SetFilePointer(hLogFile, 0, 0, FILE_END);
         if (!WriteFile(hLogFile, tempString, (DWORD)(_tcslen(tempString)*sizeof(TCHAR)), &dwWritten, NULL))
         {
-            printf("Failed to write to lhook.log no logging will be performed. (%d)\n", GetLastError());
+            printf("Failed to write to shook.log no logging will be performed. (%d)\n", GetLastError());
             CloseHandle(hLogFile);
             hLogFile = INVALID_HANDLE_VALUE;
         }

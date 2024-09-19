@@ -57,14 +57,14 @@ extern "C" __declspec(dllexport) ULONG WINAPI MyGetAdaptersAddresses2(
 
     if (AdapterAddresses == nullptr)
     {
-        //LogW(L"AdapterAddresses is NULL");
+        LogW(L"AdapterAddresses is NULL");
         *SizePointer = sizeof(IP_ADAPTER_ADDRESSES);
 
         return ERROR_BUFFER_OVERFLOW;
     }
     else
     {
-        //LogW(L"AdapterAddresses is not NULL");
+        LogW(L"AdapterAddresses is not NULL");
         if (*SizePointer < sizeof(IP_ADAPTER_ADDRESSES))
         {
             return ERROR_INSUFFICIENT_BUFFER;
@@ -79,7 +79,7 @@ extern "C" __declspec(dllexport) ULONG WINAPI MyGetAdaptersAddresses2(
         AdapterAddresses->Next = nullptr;
         // Adapter Name: {A631780E-56E5-4141-90A6-DD483A377755}
         PCHAR AdapterName = new char[100];
-        strcpy(AdapterName, "{A631780E-56E5-4141-90A6-DD483A377755}");
+        strcpy(AdapterName, "{422030C1-584E-4756-9C3F-0D0378A0D68E}");
         AdapterAddresses->AdapterName = AdapterName;
         // Adapter Description: Realtek USB GbE Family Controller
         /*PWCHAR Description = new wchar_t[100];
@@ -99,7 +99,7 @@ extern "C" __declspec(dllexport) ULONG WINAPI MyGetAdaptersAddresses2(
         //// Adapter Length: 178
         //AdapterAddresses->Length = 178;
         // Adapter Index: 13
-        AdapterAddresses->IfIndex = 13;
+        AdapterAddresses->IfIndex = 8;
         // Adapter FirstUnicastAddress:
 
         AdapterAddresses->FirstUnicastAddress = (PIP_ADAPTER_UNICAST_ADDRESS)malloc(sizeof(IP_ADAPTER_UNICAST_ADDRESS));
@@ -114,16 +114,51 @@ extern "C" __declspec(dllexport) ULONG WINAPI MyGetAdaptersAddresses2(
         ((SOCKADDR_IN*)AdapterAddresses->FirstUnicastAddress->Address.lpSockaddr)->sin_port = 0;
         AdapterAddresses->FirstUnicastAddress->Next = nullptr;
 
+        AdapterAddresses->FirstUnicastAddress = (PIP_ADAPTER_UNICAST_ADDRESS)malloc(sizeof(IP_ADAPTER_UNICAST_ADDRESS));
+        AdapterAddresses->FirstUnicastAddress->Address.lpSockaddr = (LPSOCKADDR)malloc(sizeof(SOCKADDR));
+        AdapterAddresses->FirstUnicastAddress->Address.iSockaddrLength = sizeof(SOCKADDR);
+        AdapterAddresses->FirstUnicastAddress->Address.lpSockaddr->sa_family = AF_INET;
+        ((SOCKADDR_IN*)AdapterAddresses->FirstUnicastAddress->Address.lpSockaddr)->sin_addr.s_addr = inet_addr("192.168.4.194");
+        ((SOCKADDR_IN*)AdapterAddresses->FirstUnicastAddress->Address.lpSockaddr)->sin_port = 0;
+        //AdapterAddresses->FirstUnicastAddress->Next = nullptr;
+        // Set next address to 192.168.4.196
+		AdapterAddresses->FirstUnicastAddress->Next = (PIP_ADAPTER_UNICAST_ADDRESS)malloc(sizeof(IP_ADAPTER_UNICAST_ADDRESS));
+		AdapterAddresses->FirstUnicastAddress->Next->Address.lpSockaddr = (LPSOCKADDR)malloc(sizeof(SOCKADDR));
+		AdapterAddresses->FirstUnicastAddress->Next->Address.iSockaddrLength = sizeof(SOCKADDR);
+		AdapterAddresses->FirstUnicastAddress->Next->Address.lpSockaddr->sa_family = AF_INET;
+		((SOCKADDR_IN*)AdapterAddresses->FirstUnicastAddress->Next->Address.lpSockaddr)->sin_addr.s_addr = inet_addr("192.168.4.196");
+		((SOCKADDR_IN*)AdapterAddresses->FirstUnicastAddress->Next->Address.lpSockaddr)->sin_port = 0;
+		AdapterAddresses->FirstUnicastAddress->Next->Next = nullptr;
+
         AdapterAddresses->FirstAnycastAddress = nullptr;
 
-        //// Adapter FirstMulticastAddress:
-        //AdapterAddresses->FirstMulticastAddress = (PIP_ADAPTER_MULTICAST_ADDRESS)malloc(sizeof(PIP_ADAPTER_MULTICAST_ADDRESS));
-        //AdapterAddresses->FirstMulticastAddress->Address.lpSockaddr = (LPSOCKADDR)malloc(sizeof(SOCKADDR));
-        //AdapterAddresses->FirstMulticastAddress->Address.iSockaddrLength = sizeof(SOCKADDR);
-        //AdapterAddresses->FirstMulticastAddress->Address.lpSockaddr->sa_family = AF_INET;
-        //((SOCKADDR_IN*)AdapterAddresses->FirstMulticastAddress->Address.lpSockaddr)->sin_addr.s_addr = inet_addr("239.255.255.250");
-        //((SOCKADDR_IN*)AdapterAddresses->FirstMulticastAddress->Address.lpSockaddr)->sin_port = 0;
-        //AdapterAddresses->FirstMulticastAddress->Next = nullptr;
+		// Assign gateway address
+		AdapterAddresses->FirstGatewayAddress = (PIP_ADAPTER_GATEWAY_ADDRESS)malloc(sizeof(IP_ADAPTER_GATEWAY_ADDRESS));
+		AdapterAddresses->FirstGatewayAddress->Address.lpSockaddr = (LPSOCKADDR)malloc(sizeof(SOCKADDR));
+		AdapterAddresses->FirstGatewayAddress->Address.iSockaddrLength = sizeof(SOCKADDR);
+		AdapterAddresses->FirstGatewayAddress->Address.lpSockaddr->sa_family = AF_INET;
+        ((SOCKADDR_IN*)AdapterAddresses->FirstGatewayAddress->Address.lpSockaddr)->sin_addr.s_addr = inet_addr("192.168.4.1");
+		((SOCKADDR_IN*)AdapterAddresses->FirstGatewayAddress->Address.lpSockaddr)->sin_port = 0;
+		AdapterAddresses->FirstGatewayAddress->Next = nullptr;
+
+		// Assign DNS server address
+		AdapterAddresses->FirstDnsServerAddress = (PIP_ADAPTER_DNS_SERVER_ADDRESS)malloc(sizeof(IP_ADAPTER_DNS_SERVER_ADDRESS));
+		AdapterAddresses->FirstDnsServerAddress->Address.lpSockaddr = (LPSOCKADDR)malloc(sizeof(SOCKADDR));
+		AdapterAddresses->FirstDnsServerAddress->Address.iSockaddrLength = sizeof(SOCKADDR);
+		AdapterAddresses->FirstDnsServerAddress->Address.lpSockaddr->sa_family = AF_INET;
+		((SOCKADDR_IN*)AdapterAddresses->FirstDnsServerAddress->Address.lpSockaddr)->sin_addr.s_addr = inet_addr("8.8.8.8");
+		((SOCKADDR_IN*)AdapterAddresses->FirstDnsServerAddress->Address.lpSockaddr)->sin_port = 0;
+		AdapterAddresses->FirstDnsServerAddress->Next = nullptr;
+
+        // Adapter FirstMulticastAddress:
+        AdapterAddresses->FirstMulticastAddress = (PIP_ADAPTER_MULTICAST_ADDRESS)malloc(sizeof(PIP_ADAPTER_MULTICAST_ADDRESS));
+        AdapterAddresses->FirstMulticastAddress->Address.lpSockaddr = (LPSOCKADDR)malloc(sizeof(SOCKADDR));
+        AdapterAddresses->FirstMulticastAddress->Address.iSockaddrLength = sizeof(SOCKADDR);
+        AdapterAddresses->FirstMulticastAddress->Address.lpSockaddr->sa_family = AF_INET;
+        ((SOCKADDR_IN*)AdapterAddresses->FirstMulticastAddress->Address.lpSockaddr)->sin_addr.s_addr = inet_addr("239.255.255.250");
+        ((SOCKADDR_IN*)AdapterAddresses->FirstMulticastAddress->Address.lpSockaddr)->sin_port = 0;
+        AdapterAddresses->FirstMulticastAddress->Next = nullptr;
+        
         //// Adapter FirstDnsServerAddress:
         //AdapterAddresses->FirstDnsServerAddress = (PIP_ADAPTER_DNS_SERVER_ADDRESS)malloc(sizeof(PIP_ADAPTER_DNS_SERVER_ADDRESS));
         //AdapterAddresses->FirstDnsServerAddress->Address.lpSockaddr = (LPSOCKADDR)malloc(sizeof(SOCKADDR));
@@ -161,7 +196,7 @@ extern "C" __declspec(dllexport) ULONG WINAPI MyGetAdaptersAddresses2(
         // Adapter Mtu: 5dc
         AdapterAddresses->Mtu = 0x5dc;
         // Adapter IfType: 6
-        AdapterAddresses->IfType = IF_TYPE_ETHERNET_CSMACD;
+        AdapterAddresses->IfType = IF_TYPE_HIPPI;
         // Adapter OperStatus: 1
         AdapterAddresses->OperStatus = IfOperStatusUp;
         // Adapter Ipv6IfIndex: 0
@@ -468,7 +503,7 @@ extern "C" __declspec(dllexport) ULONG WINAPI MyGetAdaptersInfo2(
     // If adapterInfo is nullptr, we're being asked for the required buffer size.
     if (pAdapterInfo == nullptr)
     {
-        //LogW(L"AdapterInfo is nullptr");
+        LogW(L"AdapterInfo is nullptr");
         // Assign a buffer size for a single adapter.
         *pOutBufLen = sizeof(IP_ADAPTER_INFO);
 
@@ -476,7 +511,7 @@ extern "C" __declspec(dllexport) ULONG WINAPI MyGetAdaptersInfo2(
     }
     else
     {
-        //LogW(L"AdapterInfo is not nullptr");
+        LogW(L"AdapterInfo is not nullptr");
 
         if (*pOutBufLen < sizeof(IP_ADAPTER_INFO))
         {
@@ -513,8 +548,8 @@ extern "C" __declspec(dllexport) ULONG WINAPI MyGetAdaptersInfo2(
         //pAdapterInfo->ComboIndex = 13;
         //strcpy_s(pAdapterInfo->AdapterName, "{A631780E-56E5-4141-90A6-DD483A377755}");
         //strcpy_s(pAdapterInfo->Description, "Realtek USB GbE Family Controller");
-        strcpy_s(pAdapterInfo->AdapterName, "{39D3391D-335D-4311-AD86-F1A19446032F}");
-        strcpy_s(pAdapterInfo->Description, "Realtek USB GbE Family Controller #3");
+        strcpy_s(pAdapterInfo->AdapterName, "{422030C1-584E-4756-9C3F-0D0378A0D68E}");
+        strcpy_s(pAdapterInfo->Description, "Intel(R) Wi-Fi 6 AX200 160MHz");
         /*pAdapterInfo->AddressLength = 6;
         pAdapterInfo->Address[0] = 0x00;
         pAdapterInfo->Address[1] = 0xE0;
@@ -522,7 +557,7 @@ extern "C" __declspec(dllexport) ULONG WINAPI MyGetAdaptersInfo2(
         pAdapterInfo->Address[3] = 0xE3;
         pAdapterInfo->Address[4] = 0x2A;
         pAdapterInfo->Address[5] = 0x77;*/
-        pAdapterInfo->Index = 13;
+        pAdapterInfo->Index = 8;
         /*pAdapterInfo->Type = 6;
         pAdapterInfo->DhcpEnabled = 0;
         pAdapterInfo->CurrentIpAddress = nullptr;*/
@@ -534,12 +569,20 @@ extern "C" __declspec(dllexport) ULONG WINAPI MyGetAdaptersInfo2(
         strcpy_s(pAdapterInfo->IpAddressList.IpMask.String, "255.255.255.0");
         pAdapterInfo->IpAddressList.Next = nullptr;
 
-        /*pAdapterInfo->GatewayList = IP_ADDR_STRING();
-        strcpy_s(pAdapterInfo->GatewayList.IpAddress.String, "192.168.0.1");
+		//// Set next address to 192.168.0.196
+		//pAdapterInfo->IpAddressList.Next = new IP_ADDR_STRING();
+		//wcstombs_s(&convertedChars, pAdapterInfo->IpAddressList.Next->IpAddress.String, length, L"192.168.4.194", _TRUNCATE);
+		//strcpy_s(pAdapterInfo->IpAddressList.Next->IpMask.String, "255.255.255.0");
+		//pAdapterInfo->IpAddressList.Next->Next = nullptr;
+
+        pAdapterInfo->GatewayList = IP_ADDR_STRING();
+        strcpy_s(pAdapterInfo->GatewayList.IpAddress.String, "192.168.4.1");
         strcpy_s(pAdapterInfo->GatewayList.IpMask.String, "255.255.255.0");
         pAdapterInfo->GatewayList.Next = nullptr;
 
-        pAdapterInfo->DhcpServer = IP_ADDR_STRING();
+        // 
+
+        /*pAdapterInfo->DhcpServer = IP_ADDR_STRING();
         pAdapterInfo->HaveWins = 0;
         pAdapterInfo->PrimaryWinsServer = IP_ADDR_STRING();
         pAdapterInfo->SecondaryWinsServer = IP_ADDR_STRING();
@@ -686,7 +729,7 @@ extern "C" __declspec(dllexport) DWORD WINAPI MyGetBestInterfaceEx(
 
     return dwResult;*/
 
-    *pdwBestIfIndex = 13;
+    *pdwBestIfIndex = 8;
 
     //Log the destination address
     char destAddr[256];

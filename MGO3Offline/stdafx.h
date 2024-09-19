@@ -18,6 +18,7 @@
 #include <cryptopp/filters.h>
 #include <cryptopp/hex.h>
 #include <cryptopp/modes.h>
+#include <cryptopp/osrng.h>
 #include "Strsafe.h"
 #include "easyhook.h"
 #include "MGO3Offline.h"
