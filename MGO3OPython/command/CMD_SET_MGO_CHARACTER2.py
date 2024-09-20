@@ -6,9 +6,6 @@ class CMD_SET_MGO_CHARACTER2(Command):
         super(CMD_SET_MGO_CHARACTER2, self).__init__(receiver)
         self._receiver.encrypt = True
         self._receiver.compress = False
-        
-        self._database = Database()
-        self._database.connect()
 
     def get_data(self):
         data = {

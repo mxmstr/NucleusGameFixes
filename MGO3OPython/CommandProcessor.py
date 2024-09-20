@@ -25,7 +25,7 @@ request = sys.argv[1]
 #with open('C:\\Program Files (x86)\\Steam\\steamapps\\common\\MGS_TPP\\request.txt', 'w') as f:
 #	f.write('asdf ' + request)
 # replace all %2B with + in request
-request = request.replace('%2B', '+')
+#request = request.replace('%2B', '+')
 
 # Use the passed request value
 decoded_request = decoder.decode(request)
@@ -65,6 +65,6 @@ result = encoder.encode(execution_result[command_name])
 
 print(result)
 #print('httpMsg=' + result)
-
-# sleep for 60 seconds
-#time.sleep(60)
+#
+## sleep for 60 seconds
+##time.sleep(60)

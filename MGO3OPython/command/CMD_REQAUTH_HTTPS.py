@@ -10,18 +10,12 @@ class CMD_REQAUTH_HTTPS(Command):
         super(CMD_REQAUTH_HTTPS, self).__init__(receiver)
         self._receiver.encrypt = False
         self._receiver.compress = False
-        self._receiver.compress = False
-        
-        self._database = Database()
-        self._database.connect()
 
     def get_data(self, data):
         steam_id = data['user_name']
         crypto_key = 'MyCoolCryptoKeyAAAAAAA=='
-        session_id = str(random.randint(10**(31), 10**32 - 1)).zfill(32)
-
-        self._database.update_player_crypto_key(steam_id, crypto_key)
-        self._database.update_player_session_id(steam_id, session_id)
+        session_id = '11111111111111111111111111111111'
+        #session_id = str(random.randint(10**(31), 10**32 - 1)).zfill(32)
 
         data = {
             'aes_key': None,

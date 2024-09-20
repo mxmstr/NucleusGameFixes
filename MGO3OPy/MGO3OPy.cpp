@@ -3,18 +3,18 @@
 #include <string>
 #include <sstream>
 #include <iostream>
+#include <fstream>
 //#include <Python.h>
 #include <winhttp.h>
 #include <pybind11/embed.h>
 #include <detours.h>
 #include <iomanip>
 #include <codecvt>
+#include <mutex>
 using namespace std;
 namespace py = pybind11;
 
 HANDLE hLogFile = INVALID_HANDLE_VALUE;
-CHAR tempString[2048];
-WCHAR tempStringW[2048];
 
 LPCWSTR swzServerName;
 LPCWSTR wszVerb;
@@ -35,6 +35,9 @@ void WriteToLogFile(void* lpBuffer, size_t cbBytes)
 
 void Log(string message)
 {
+    CHAR tempString[2048];
+    ZeroMemory(tempString, sizeof(tempString));
+
     std::stringstream logMessage;
     logMessage << GetCurrentProcessId() << ": " << message;
 
@@ -44,6 +47,9 @@ void Log(string message)
 
 void LogW(wstring message)
 {
+    WCHAR tempStringW[2048];
+    ZeroMemory(tempStringW, sizeof(tempStringW));
+
     std::wstringstream logMessage;
     logMessage << GetCurrentProcessId() << ": " << message;
 
@@ -129,6 +135,8 @@ BOOL WINAPI MyWinHttpSetOption(HINTERNET hInternet, DWORD dwOption, LPVOID lpBuf
     return TRUE;
 }
 
+std::mutex batchFileMutex;
+
 std::string exec(const char* cmd) {
     std::array<char, 128> buffer;
     std::string result;
@@ -139,7 +147,21 @@ std::string exec(const char* cmd) {
         throw std::runtime_error("GetCurrentDirectory failed");
     }
 
-	Log("Current directory: " + std::string(currentDir));
+    Log("Current directory: " + std::string(currentDir));
+
+    // Lock the mutex to ensure exclusive access to the batch file
+    std::unique_lock<std::mutex> lock(batchFileMutex);
+
+    // Create a temporary batch file
+    std::string batchFilePath = "temp_command.bat";
+    std::ofstream batchFile(batchFilePath);
+    if (!batchFile.is_open()) {
+        throw std::runtime_error("Failed to create batch file");
+    }
+
+    // Write the command to the batch file
+    batchFile << cmd << std::endl;
+    batchFile.close();
 
     // Set up the security attributes struct.
     SECURITY_ATTRIBUTES sa;
@@ -164,21 +186,21 @@ std::string exec(const char* cmd) {
     si.cb = sizeof(STARTUPINFO);
     si.hStdError = hStdOutWrite;
     si.hStdOutput = hStdOutWrite;
-    si.dwFlags |= STARTF_USESTDHANDLES | STARTF_USESHOWWINDOW;
+    si.dwFlags |= STARTF_USESTDHANDLES;// | STARTF_USESHOWWINDOW;
     si.wShowWindow = SW_SHOW; // Make the command prompt window visible
 
     // Set up the process info struct.
     PROCESS_INFORMATION pi;
     ZeroMemory(&pi, sizeof(PROCESS_INFORMATION));
 
-    // Create the child process.
-    if (!CreateProcessA(NULL, const_cast<char*>(cmd), NULL, NULL, TRUE, 0, NULL, currentDir, &si, &pi)) {
-		// Log last error
-		std::wstringstream logMessage;
-		logMessage << "CreateProcess failed with error: " << GetLastError();
-		LogW(logMessage.str());
+    // Create the child process to execute the batch file.
+    if (!CreateProcessA(NULL, const_cast<char*>(batchFilePath.c_str()), NULL, NULL, TRUE, 0, NULL, currentDir, &si, &pi)) {
+        // Log last error
+        std::wstringstream logMessage;
+        logMessage << "CreateProcess failed with error: " << GetLastError();
+        LogW(logMessage.str());
 
-		throw std::runtime_error("CreateProcess failed");
+        throw std::runtime_error("CreateProcess failed");
     }
 
     // Close the write end of the pipe before reading from the read end of the pipe.
@@ -189,7 +211,8 @@ std::string exec(const char* cmd) {
     while (ReadFile(hStdOutRead, buffer.data(), buffer.size(), &bytesRead, NULL) && bytesRead > 0) {
         std::string line(buffer.data(), bytesRead);
         std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
-        //LogW(L"line: " + converter.from_bytes(line)); // Log each line of output
+        // Log each line of output
+        // LogW(L"line: " + converter.from_bytes(line));
         result += line;
     }
 
@@ -200,6 +223,12 @@ std::string exec(const char* cmd) {
     CloseHandle(pi.hProcess);
     CloseHandle(pi.hThread);
     CloseHandle(hStdOutRead);
+
+    // Delete the temporary batch file
+    DeleteFileA(batchFilePath.c_str());
+
+    // Release the mutex lock
+    lock.unlock();
 
     return result;
 }
@@ -258,7 +287,7 @@ BOOL WINAPI MyWinHttpSendRequest(HINTERNET hRequest, LPCWSTR lpszHeaders, DWORD 
 
     try {
 		std::stringstream commandStream;
-        std::string command = "cmd.exe /C cd plugins\\MGO3OPython && Python-3.8.0-64\\python.exe CommandProcessor.py ";
+        std::string command = "cd plugins\\MGO3OPython && Python-3.8.0-64\\python.exe CommandProcessor.py ";
 		commandStream << "cd plugins\\MGO3OPython && Python-3.8.0-64\\python.exe CommandProcessor.py ";
         //command += R"("YnHdLj/1b4SBvSa1/0bYhcd4UAB70VUx5O9bf1qPreoZthl/BZLQ76wlsSUACiuiZQbHR2TZczXAx1QOdz+MimZdqXl5kBwO4Qk4gCH2KahOdA9Q1HePoVE2yC6i+XcRcZ2EIbiOe36cahdUdtbS9tb4Lc/6wDCi3xr/d/QsbNNtcp+b0EJCs9gJvpl71Fn/Ra7uwIsdfd/QEm2TNoE0YfMcl9GqTi4xQrqzpBWpEgblnBGZVjEXNi8I9ePga4KN5DRQwpS6wxUlvGoceP5dCv7tHS944HKAnd6FUCwlWx3lqeC2Yq0OhzqFqr5Zy/5RqDx1DlLfpmcr9VP3C2T9LYR5ksUXGrov1ZIWKSYcPxDxuZNAna00UUtx2yRoymyJ4PvnagHu6o+pgCIl7Pj5hoxp77/p9fHjcj4Hp2kgRo1oiJIrA+XBOMZnzFsQEWXUNC9R7gBo2BNANz0f5O8Kioynl6Rg/wsHJRuX6+PMbnagu0k/GPCaYCb9mJ1uGXNaj8JMgc6ShCq+Jj67Z/Ki0+7Ox/7td3GJTj1FhocWWxccF4YlUo/W0SqUowFaNOI3224EQD1IuZAqkFchBfixkh5qPddbdVATVnVBPoGWeY9O/j/d3Y66x7ClQUVBKLWCje+XhDOydvpT5kLHulYMDbUL4/duW7u0ng9/C0HiDJdcn3CHuBOe4L+Il5hwXRWrhcszq/lsPf9RxLCVze1urVh6aBZktxliMNoVPWWhAMu74Pobeesa1Y/f5K6rqcw+XVy2khuXyYRauaYqVOrckVakUSJ721aPi/dJLS6ZZis07OSL3QhHaWYTlYB8niSWV7qW601zgqvS+QuH2Mo2bQ==")";
 
@@ -307,6 +336,11 @@ BOOL WINAPI MyWinHttpSendRequest(HINTERNET hRequest, LPCWSTR lpszHeaders, DWORD 
             }
         }
 
+		// replace %2B with +
+		while (requestFilteredA.find("%2B") != std::string::npos) {
+			requestFilteredA.replace(requestFilteredA.find("%2B"), 3, "+");
+		}
+
         Log("RequestA: " + requestFilteredA);
 
 		//commandStream << "\"" << converter2.to_bytes(requestFiltered) << "\"";
@@ -317,6 +351,16 @@ BOOL WINAPI MyWinHttpSendRequest(HINTERNET hRequest, LPCWSTR lpszHeaders, DWORD 
         Log("Command: " + command);
 
         std::string result = exec(command.c_str());
+
+        // remove first line from result
+
+		for (int i = 0; i < 2; i++) {
+            size_t firstNewline = result.find("\n");
+            if (firstNewline != std::string::npos) {
+                Log("Found newline at index: " + std::to_string(firstNewline));
+                result = result.substr(firstNewline + 1);
+            }
+		}
 
         Log("Command output 1: " + result);
 		/*while (result.find("\r\r") != std::string::npos) {
@@ -444,9 +488,6 @@ BOOL WINAPI MyWinHttpReadData(HINTERNET hRequest, LPVOID lpBuffer, DWORD dwNumbe
 
 __declspec(dllexport) void __stdcall NativeInjectionEntryPoint(REMOTE_ENTRY_INFO* remoteInfo)
 {
-    ZeroMemory(tempString, sizeof(tempString));
-    ZeroMemory(tempStringW, sizeof(tempStringW));
-
     hLogFile = CreateFile(L"MGO3OPy.log", GENERIC_WRITE, FILE_SHARE_WRITE | FILE_SHARE_READ,
         NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
 
