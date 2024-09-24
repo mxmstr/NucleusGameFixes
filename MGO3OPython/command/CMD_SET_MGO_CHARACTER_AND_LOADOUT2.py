@@ -12,7 +12,7 @@ class CMD_SET_MGO_CHARACTER_AND_LOADOUT2(Command):
         
         with open('user_character.json', 'w') as f:
             f.write(json.dumps(data['character']))
-
+        
         with open('user_loadout.json', 'w') as f:
             f.write(json.dumps(data['loadout']))
 

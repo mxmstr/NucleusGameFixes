@@ -17,15 +17,14 @@ decoder = Decoder()
 #request = "YnHdLj/1b4RBZXynl0xG1B0domEayp/1lLk99kX4wjo7NblxIkhv1ByeVvdNenjEJTavALlsfZfSgBpLKuCMvHkaMHdNOW9g+4ytGq/cFcXOpW6W3rjoDzBVAFXLVj+HRATx/hb68EX3+00fDqDfc0/wdXEaV+G7h5Zc4M2QoF5juLcqskL1iLDYQlLVsTH5VCgC7mK204ygBrK6BopI6RZN6pX+6R+lfT/01GExQVs=";
 
 # get first command line argument and assign to request
-request = sys.argv[1]
+#request = sys.argv[1]
+
+request = ''
+# open request.txt and assign to request
+with open('request.txt', 'r') as f:
+	request = f.read()
 
 #print('Request: {} \n'.format(request))
-
-# log request to a text file
-#with open('C:\\Program Files (x86)\\Steam\\steamapps\\common\\MGS_TPP\\request.txt', 'w') as f:
-#	f.write('asdf ' + request)
-# replace all %2B with + in request
-#request = request.replace('%2B', '+')
 
 # Use the passed request value
 decoded_request = decoder.decode(request)

@@ -191,7 +191,7 @@ int main()
         std::string command = "Python-3.8.0-64\\python.exe CommandProcessor.py ";
         //             YnHdLj/1b4RBZXynl0xG1B0domEayp/1lLk99kX4wjo7NblxIkhv1ByeVvdNenjEJTavALlsfZfSgBpLKuCMvItPlQX75xlZ0zvQUV2ISsgKgvkURGBV62nNOB7Sc4PgjG0XFUSpOd2jrjLz0DBaIJBC6VS6fT6TFsBcVW03735Cjm5lNz8sSyFMDh0PzigW5J5kmMhKqKc=
         //command += R"("YnHdLj/1b4RBZXynl0xG1B0domEayp/1lLk99kX4wjo7NblxIkhv1ByeVvdNenjEJTavALlsfZfSgBpLKuCMvHkaMHdNOW9g+4ytGq/cFcXOpW6W3rjoDzBVAFXLVj+HRATx/hb68EX3+00fDqDfc0/wdXEaV+G7h5Zc4M2QoF5juLcqskL1iLDYQlLVsTH5VCgC7mK204ygBrK6BopI6RZN6pX+6R+lfT/01GExQVs=")";
-        std::string request = R"(YnHdLj/1b4SBvSa1/0bYhcd4UAB70VUx1K49G7OTcpOUflwAVvTKZFlT0l7iPfcx5B7eLk+BDSz+P94JR1AjUXZrYd6Oen3B8mxDgKI7ngxYGEVqLduTJATuclVMLVPgjJj3G1XQznOi2NDflFsAs3Q9Gvv0EkbfVOvSl9lOk0rzkCAtFxFY5MSxJkqmF136fVHhK+SERoktyUy2s5hh2sa+AtGsx22a8Z2jdpLjKr3SqtZNjwd3ilcZvUkT7t1tSYYzBDAYFOs/ev9AphRVoQlVyIObQBQd4DAiOyY7Nha31g2uyvDa5AkVcZNvTBjkDy2QHtJAGmre0oBUcUhbWDKAE6I3AnUJZ30L7ZRyrr7RqeeLLKVmLvMk5slUOO6QcrA2+3t7pHjuERnKep7EwSdbDPT5GoDeXMnGWsnT3wOPJ6PZBhuF5Y+XmN2Ze9pePlvo2euT5wNlQQKB5wJYbFHaMlcQZc7Ve0s9kmosGcFJorTxDicVIcnBeyRHVwJIOdm4cpZ1pTdfKSMD9X/tuV1ctpIbl8mEbO1Wm/r6N81mE5WAfJ4kls9Q1vjIfjGfeWAJIm2HSOry1GJiL0GYIN084QkGRZfh)";
+        std::string request = R"(YnHdLj/1b4RBZXynl0xG1B0domEayp/15iz2b7Qnp4nfCMYTzmD+bsdnglUeaxdiPRYC7tYw0A48gIRMbhTw+nWT1AFTbdtXr8XpkuySTHH8lnBORmS6s8D83dIqe+B8HfuqYCIqEb30j9EEcKmf845Mb0hg64FltlwzJQD7enRWvEki2w7APzGoUcYz4LekwbjO6FEGty6zlooPbsItN8bQETZV+5QhvXoJGaLU+oo35Hopk+VCq0vY7YmV8NJUDB+xR8iwDKH7FKwqcADeqzBCcqp8YR1UAeke4roXisFxEK5XOpGWYb4+P8oKh9M2Kf5QQlcv3ntWpFEie9tWj4v3SS0umWYrfmtNR++ycuTtNJ1B/+hbDdpPT+LvH1+HBJcau3Bzh/w=)";
         
         //request = request.substr(8);
         // erase "asdf" substring from request

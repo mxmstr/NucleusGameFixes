@@ -136,6 +136,7 @@ BOOL WINAPI MyWinHttpSetOption(HINTERNET hInternet, DWORD dwOption, LPVOID lpBuf
 }
 
 std::mutex batchFileMutex;
+std::mutex msgFileMutex;
 
 std::string exec(const char* cmd) {
     std::array<char, 128> buffer;
@@ -186,8 +187,8 @@ std::string exec(const char* cmd) {
     si.cb = sizeof(STARTUPINFO);
     si.hStdError = hStdOutWrite;
     si.hStdOutput = hStdOutWrite;
-    si.dwFlags |= STARTF_USESTDHANDLES;// | STARTF_USESHOWWINDOW;
-    si.wShowWindow = SW_SHOW; // Make the command prompt window visible
+    si.dwFlags |= STARTF_USESTDHANDLES | STARTF_USESHOWWINDOW;
+    si.wShowWindow = SW_HIDE; // Make the command prompt window visible
 
     // Set up the process info struct.
     PROCESS_INFORMATION pi;
@@ -225,11 +226,24 @@ std::string exec(const char* cmd) {
     CloseHandle(hStdOutRead);
 
     // Delete the temporary batch file
-    DeleteFileA(batchFilePath.c_str());
+    //DeleteFileA(batchFilePath.c_str());
 
     // Release the mutex lock
     lock.unlock();
 
+    return result;
+}
+
+std::string exec2(const char* cmd) {
+    std::array<char, 128> buffer;
+    std::string result;
+    std::unique_ptr<FILE, decltype(&_pclose)> pipe(_popen(cmd, "r"), _pclose);
+    if (!pipe) {
+        throw std::runtime_error("popen() failed!");
+    }
+    while (fgets(buffer.data(), buffer.size(), pipe.get()) != nullptr) {
+        result += buffer.data();
+    }
     return result;
 }
 
@@ -271,7 +285,7 @@ BOOL WINAPI MyWinHttpSendRequest(HINTERNET hRequest, LPCWSTR lpszHeaders, DWORD 
 
     // if wszObjectName starts with "/tppstmweb" or "/legal" set response to "La Li Lu Le Lo"
     if (wcsstr(wszObjectName, L"/tppstmweb") || wcsstr(wszObjectName, L"/legal")) {
-        Log("Setting response to La Li Lu Le Lo");
+        //Log("Setting response to La Li Lu Le Lo");
         encoded_response_bufferA = "La Li Lu Le Lo";
         return TRUE;
     }
@@ -286,14 +300,8 @@ BOOL WINAPI MyWinHttpSendRequest(HINTERNET hRequest, LPCWSTR lpszHeaders, DWORD 
     //Log("Request: " + request);
 
     try {
-		std::stringstream commandStream;
-        std::string command = "cd plugins\\MGO3OPython && Python-3.8.0-64\\python.exe CommandProcessor.py ";
-		commandStream << "cd plugins\\MGO3OPython && Python-3.8.0-64\\python.exe CommandProcessor.py ";
-        //command += R"("YnHdLj/1b4SBvSa1/0bYhcd4UAB70VUx5O9bf1qPreoZthl/BZLQ76wlsSUACiuiZQbHR2TZczXAx1QOdz+MimZdqXl5kBwO4Qk4gCH2KahOdA9Q1HePoVE2yC6i+XcRcZ2EIbiOe36cahdUdtbS9tb4Lc/6wDCi3xr/d/QsbNNtcp+b0EJCs9gJvpl71Fn/Ra7uwIsdfd/QEm2TNoE0YfMcl9GqTi4xQrqzpBWpEgblnBGZVjEXNi8I9ePga4KN5DRQwpS6wxUlvGoceP5dCv7tHS944HKAnd6FUCwlWx3lqeC2Yq0OhzqFqr5Zy/5RqDx1DlLfpmcr9VP3C2T9LYR5ksUXGrov1ZIWKSYcPxDxuZNAna00UUtx2yRoymyJ4PvnagHu6o+pgCIl7Pj5hoxp77/p9fHjcj4Hp2kgRo1oiJIrA+XBOMZnzFsQEWXUNC9R7gBo2BNANz0f5O8Kioynl6Rg/wsHJRuX6+PMbnagu0k/GPCaYCb9mJ1uGXNaj8JMgc6ShCq+Jj67Z/Ki0+7Ox/7td3GJTj1FhocWWxccF4YlUo/W0SqUowFaNOI3224EQD1IuZAqkFchBfixkh5qPddbdVATVnVBPoGWeY9O/j/d3Y66x7ClQUVBKLWCje+XhDOydvpT5kLHulYMDbUL4/duW7u0ng9/C0HiDJdcn3CHuBOe4L+Il5hwXRWrhcszq/lsPf9RxLCVze1urVh6aBZktxliMNoVPWWhAMu74Pobeesa1Y/f5K6rqcw+XVy2khuXyYRauaYqVOrckVakUSJ721aPi/dJLS6ZZis07OSL3QhHaWYTlYB8niSWV7qW601zgqvS+QuH2Mo2bQ==")";
-
         request = request.substr(8 / sizeof(wchar_t));
 
-        // convert request to c string, iterate each character and find first newline
         std::wstringstream requestFilteredStream;
 		std::wstringstream logMessage;
 
@@ -343,40 +351,39 @@ BOOL WINAPI MyWinHttpSendRequest(HINTERNET hRequest, LPCWSTR lpszHeaders, DWORD 
 
         Log("RequestA: " + requestFilteredA);
 
+        std::unique_lock<std::mutex> lock(msgFileMutex);
+
+        std::string filePath = "plugins\\MGO3OPython\\request.txt";
+        std::ofstream outFile(filePath);
+        if (!outFile.is_open()) {
+            throw std::runtime_error("Failed to create request.txt");
+        }
+        outFile << requestFilteredA;
+        outFile.close();
+
 		//commandStream << "\"" << converter2.to_bytes(requestFiltered) << "\"";
-        command += "\"" + requestFilteredA + "\" ";
+        //command += "\"" + requestFilteredA + "\" ";
 
 		//LogW(L"Command: " + commandStream.str());
 		// Convert command to wide string
-        Log("Command: " + command);
+        //Log("Command: " + command);
 
-        std::string result = exec(command.c_str());
+        std::string result = exec("cd plugins\\MGO3OPython && Python-3.8.0-64\\python.exe CommandProcessor.py ");
 
         // remove first line from result
 
 		for (int i = 0; i < 2; i++) {
             size_t firstNewline = result.find("\n");
             if (firstNewline != std::string::npos) {
-                Log("Found newline at index: " + std::to_string(firstNewline));
+                //Log("Found newline at index: " + std::to_string(firstNewline));
                 result = result.substr(firstNewline + 1);
             }
 		}
 
-        Log("Command output 1: " + result);
-		/*while (result.find("\r\r") != std::string::npos) {
-			result.erase(result.find("\r\r"), 2);
-		}*/
-        // remove returns and newlines
-		/*while (result.find("\r") != std::string::npos) {
-			result.erase(result.find("\r"), 1);
-		}
-        while (result.find("\n") != std::string::npos) {
-            result.erase(result.find("\n"), 1);
-        }*/
+        lock.unlock();
 
-        //encoded_response_buffer = converter.from_bytes(result);
+        Log("Command output 1: " + result);
         encoded_response_bufferA = result;
-        Log("Command output 2: " + result);
     }
     catch (const std::exception& e) {
         std::wstringstream err;

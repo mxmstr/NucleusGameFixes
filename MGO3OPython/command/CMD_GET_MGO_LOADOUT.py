@@ -9,14 +9,17 @@ class CMD_GET_MGO_LOADOUT(Command):
         self._receiver.compress = True
 
     def get_data(self):
+        
+        loadout_json = {}    
 
-        loadout_json = ''
+        #with open('default_loadout.json', 'r') as f:
+        #    loadout_json = json.loads(f.read())
         
         try:
             with open('user_loadout.json', 'r') as f:
                 loadout_json = json.loads(f.read())
         except FileNotFoundError:
-            with open('loadout_loadout.json', 'r') as f:
+            with open('default_loadout.json', 'r') as f:
                 loadout_json = json.loads(f.read())
                 with open('user_loadout.json', 'w') as f:
                     f.write(json.dumps(loadout_json))
