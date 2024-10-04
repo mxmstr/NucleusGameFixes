@@ -6,6 +6,7 @@ config.read('MGSVOffline.ini')
 my_steam_id = config.get('Settings', 'my_steam_id')
 settings_path = os.path.join(os.environ['USERPROFILE'], 'Documents', 'MGSVOffline', my_steam_id)
 user_character_path = os.path.join(settings_path, 'user_character.json')
+user_loadout_path = os.path.join(settings_path, 'user_loadout.json')
 
 class CMD_DELETE_MGO_CHARACTER(Command):
 
@@ -17,16 +18,24 @@ class CMD_DELETE_MGO_CHARACTER(Command):
     def get_data(self, data):
         
         character_index = data['characterIndex']
-        character_json = ''
+        character_json = {}
 
         with open(user_character_path, 'r') as f:
-		    character_json = json.loads(f.read())
-
-        del character_json['character_list'][character_index]
+            character_json = json.loads(f.read())
+            del character_json['character_list'][character_index]
 
         with open(user_character_path, 'w') as f:
             f.write(json.dumps(character_json))
-
+        
+        loadout_json = {}
+        
+        with open(user_loadout_path, 'r') as f:
+            loadout_json = json.loads(f.read())
+            del loadout_json['character_list'][character_index]
+        
+        with open(user_loadout_path, 'w') as f:
+            f.write(json.dumps(loadout_json))
+        
         data = {
             'crypto_type': 'COMPOUND',
             'flowid': None,
